@@ -156,15 +156,21 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self,
                  vocab_size:int,
+                 n_embd:int,
                  latent_dim:int,
                  num_layers:int=1,
                  batch_first:bool=True) -> None:
         super().__init__()
 
-        self.rnn = nn.RNN(vocab_size,
+        self.embd = nn.Embedding(vocab_size, n_embd)
+
+        self.rnn_cell= nn.RNN(n_embd,
                           latent_dim,
                           num_layers=num_layers,
                           batch_first=batch_first)
+        
+        self.out = nn.Linear(latent_dim, vocab_size)
+        
     
     def forward(self, 
                 x:torch.Tensor, 
@@ -178,7 +184,24 @@ class Decoder(nn.Module):
         return:
             decoded:    (batch_size, max_length, vocab_size)
         """
-        raise NotImplementedError
+        batch_size = x.shape[0]
+        logging.info(f"decoder assumes <SOM> token is 1")
+        decoder_input = torch.ones((batch_size,1), dtype=torch.long) # <SOM> token is number 1.
+        decoder_hidden = context
+        
+        # track the outputs and hidden states at each 'time' step. 
+        decoder_outputs = []
+        decoder_hiddens = []
+        for _ in range(max_length):
+            decoder_output, decoder_hidden = self.forward_step(decoder_input, decoder_hidden)
+            pass
+    
+    def forward_step(self, x, hidden):
+        tokens = self.embd(x)
+        hidden_states, last_hidden_state = self.rnn_cell(tokens, hidden)
+        logits = self.out(last_hidden_state)
+        return logits, last_hidden_state
+
 
 
 # a supervised learning shell taking the VAE latent dimension as input
