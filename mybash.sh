@@ -5,7 +5,7 @@
 #SBATCH --nodes=1
 
 module load python/3.10 scipy-stack
-source #PROJECTSRRG/project-property-manifold/venv/bin/activate
+source $PROJECTSRRG/project-property-manifold/venv/bin/activate
 
 pip install --no-index --upgrade pip
 pip install --no-index -r requirements.txt
