@@ -3,6 +3,7 @@
 #SBATCH --time=0-00:05:00
 #SBATCH --job-name="test-run"
 #SBATCH --nodes=1
+#SBATCH --mem=4G
 
 module load python/3.10 scipy-stack
 source $PROJECTSRRG/project-property-manifold/venv/bin/activate
