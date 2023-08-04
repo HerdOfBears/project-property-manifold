@@ -60,8 +60,9 @@ def training_loop(
 
 if __name__=="__main__":
     # logging.basicConfig(level=logging.INFO)
-    N_EPOCHS = 2
-    print("test")
+    N_EPOCHS = 1
+    print("running training script...")
+    print("constructing data class")
     data = Zinc250k("./data", 
                        "250k_rndm_zinc_drugs_clean_3.csv",
                        "./data",
@@ -73,7 +74,7 @@ if __name__=="__main__":
     # create data loaders
     train_loader, valid_loader, test_loader = data.create_data_splits()
 
-    print("try constructing Test class")
+    print("constructing Test class")
     testnn = Test(data.alphabet_size,
                   9,
                   output_losses=True)
@@ -84,6 +85,7 @@ if __name__=="__main__":
               "kl": [],
               "prop": []}
     
+    print("starting training loop")
     for epoch in range(N_EPOCHS):
         print(f"epoch {epoch}")
 
