@@ -197,10 +197,13 @@ class Decoder(nn.Module):
         logging.info(f"Decoder fwd: input x is not used.")
         batch_size = x.shape[0]
         logging.info(f"decoder assumes <SOM> token is 1")
-        decoder_input = torch.ones((batch_size,1), dtype=torch.long) # <SOM> token is number 1.
+        decoder_input = torch.ones(
+            (batch_size,1), 
+            dtype=torch.long
+        ) # <SOM> token is number 1.
         decoder_hidden = context.unsqueeze(0) # (1, batch_size, latent_dim)
         logging.info(f"initial {decoder_hidden.shape=}")
-        
+        logging.warning(f"decoder input is on device {decoder_input.device}")
         # track the outputs and hidden states at each 'time' step. 
         decoder_outputs = []
         decoder_hiddens = []

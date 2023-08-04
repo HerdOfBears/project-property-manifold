@@ -61,6 +61,10 @@ def training_loop(
 if __name__=="__main__":
     # logging.basicConfig(level=logging.INFO)
     N_EPOCHS = 1
+    
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"using device: {device}")
     print("running training script...")
     print("constructing data class")
     data = Zinc250k("./data", 
@@ -74,12 +78,24 @@ if __name__=="__main__":
     # create data loaders
     train_loader, valid_loader, test_loader = data.create_data_splits()
 
+
+    #######################
+    # Construct model(s)
+    #######################
     print("constructing Test class")
     testnn = Test(data.alphabet_size,
                   9,
                   output_losses=True)
     
+    #######################
     # train
+    #######################
+
+    # send data and model(s) to device
+    train_loader.data.to(device)
+    train_loader.targets.to(device)
+    testnn.to(device)
+
     losses = {"iteration": [],
               "recon": [],
               "kl": [],
