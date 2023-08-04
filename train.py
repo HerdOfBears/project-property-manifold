@@ -92,8 +92,8 @@ if __name__=="__main__":
     #######################
 
     # send data and model(s) to device
-    train_loader.data.to(device)
-    train_loader.targets.to(device)
+    train_loader.dataset.data.to(device)
+    train_loader.dataset.targets.to(device)
     testnn.to(device)
 
     losses = {"iteration": [],
