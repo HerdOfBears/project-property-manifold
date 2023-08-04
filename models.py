@@ -344,10 +344,11 @@ class Test(nn.Module):
         self.padding_idx = 0 
         self.output_losses = output_losses
 
-        if not one_hot_encoding:
-            self.embedding = nn.Embedding(alphabet_size, n_embd)
-        else:
-            n_embd = alphabet_size
+        self.embedding = nn.Embedding(alphabet_size, n_embd)
+        # if not one_hot_encoding:
+        #     self.embedding = nn.Embedding(alphabet_size, n_embd)
+        # else:
+        #     n_embd = alphabet_size
         print("====================================")
         print(f"model initialized with {n_embd=} and {self.latent_dim=}")
         print("====================================")
