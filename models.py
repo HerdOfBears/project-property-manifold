@@ -50,7 +50,8 @@ class VAESkeleton(nn.Module):
         if isinstance(z, torch.Tensor) is False:
             raise TypeError("z must be a torch.Tensor")
         logging.info(f"{z.shape=}")
-        return self.decoder(z)
+        # return self.decoder(z) FLAG
+        return self.decoder(z,z)
     
     def reparameterize(self, mu:torch.Tensor, logvar:torch.Tensor) -> torch.Tensor:
         """ 
@@ -174,32 +175,64 @@ class Decoder(nn.Module):
     
     def forward(self, 
                 x:torch.Tensor, 
-                context:torch.Tensor=None, 
+                context:torch.Tensor=None,
+                target_teacher:torch.Tensor=None, 
                 max_length:int=111) -> torch.Tensor:
         """
         input:
             x:          (batch_size, 1)
+                        the input sequence.
+
             context:    (batch_size, latent_dim)
+                    the latent space representation of 
+                    the input sequence x.
+            
+            target_teacher: (batch_size, max_length)
+                            the true target sequence.
             max_length: int
+        
         return:
             decoded:    (batch_size, max_length, vocab_size)
         """
+        logging.info(f"Decoder fwd: input x is not used.")
         batch_size = x.shape[0]
         logging.info(f"decoder assumes <SOM> token is 1")
         decoder_input = torch.ones((batch_size,1), dtype=torch.long) # <SOM> token is number 1.
-        decoder_hidden = context
+        decoder_hidden = context.unsqueeze(0) # (1, batch_size, latent_dim)
+        logging.info(f"initial {decoder_hidden.shape=}")
         
         # track the outputs and hidden states at each 'time' step. 
         decoder_outputs = []
         decoder_hiddens = []
         for _ in range(max_length):
             decoder_output, decoder_hidden = self.forward_step(decoder_input, decoder_hidden)
-            pass
+            
+            # collect logits and hidden states
+            decoder_outputs.append(decoder_output)
+            decoder_hiddens.append(decoder_hidden) # array of [(n_layers, batch_size, hidden_dim)]
+
+            # update input and hidden state
+            if target_teacher is not None:
+                decoder_input = target_teacher[:, _].unsqueeze(1)
+            else:
+                # use predictions as next input
+                decoder_input = decoder_output.argmax(
+                    dim=-1,
+                    keepdim=True
+                ).detach()
+
+            logging.info(f"{decoder_hidden.shape=}")
+            # decoder_hidden = decoder_hidden.unsqueeze(0)
+            # decoder_hidden = torch.ones((100, self.latent_dim), dtype=torch.float32)
+        decoder_outputs = torch.cat(decoder_outputs, dim=1)
+        return decoder_outputs
     
     def forward_step(self, x, hidden):
         tokens = self.embd(x)
+        logging.info(f"{tokens.shape=} | {x.shape=}")
         hidden_states, last_hidden_state = self.rnn_cell(tokens, hidden)
         logits = self.out(last_hidden_state)
+        logits.squeeze_(0)
         return logits, last_hidden_state
 
 
@@ -300,19 +333,24 @@ class Test(nn.Module):
     def __init__(self,
                  alphabet_size:int,
                  n_embd:int,
-                 one_hot_encoding:bool=False) -> None:
+                 one_hot_encoding:bool=False,
+                 output_losses:bool=False) -> None:
         super().__init__()
         self.latent_dim = 4
         self.one_hot_encoding = one_hot_encoding
         self.padding_idx = 0 
+        self.output_losses = output_losses
 
         if not one_hot_encoding:
             self.embedding = nn.Embedding(alphabet_size, n_embd)
         else:
             n_embd = alphabet_size
-
+        print("====================================")
+        print(f"model initialized with {n_embd=} and {self.latent_dim=}")
+        print("====================================")
         encoder = Encoder(n_embd, self.latent_dim) # does embedding, and 2*latent_dim inside
-        decoder = nn.Linear(self.latent_dim, alphabet_size)
+        # decoder = nn.Linear(self.latent_dim, alphabet_size)
+        decoder = Decoder(alphabet_size, n_embd, self.latent_dim)
 
         vae = VAESkeleton(encoder, decoder)
         ff = FeedForward(self.latent_dim, 4, 1)
@@ -340,22 +378,38 @@ class Test(nn.Module):
         logging.info(f"after embd {x.shape=}")
         decoded_x, mu, logvar = self.vae(x, last_non_pad_idxs) # (batch_size, T, alphabet_size), (batch_size, latent_dim), (batch_size, latent_dim)
         estimated_label = self.ff(mu) # (batch_size, 1)
+        
+        beta = 1.0
 
         loss = None
         if targets is not None:
             logging.info(f"{decoded_x.shape=} | {idx.shape=} | {targets.shape=} | {estimated_label.shape=} ")
-            loss_recon = F.cross_entropy(decoded_x, idx[:,[1]].view(-1), ignore_index=self.padding_idx)
-            loss_KL    = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-            loss_property = F.mse_loss(estimated_label.view(-1), targets )
-            logging.warning(f"{loss_recon=} | {loss_KL=} | {loss_property=}")
+            loss_recon = F.cross_entropy(
+                decoded_x, 
+                idx[:,[1]].view(-1), 
+                ignore_index=self.padding_idx,
+                reduction="mean"
+            )
+
+            # notice the mean reduction
+            loss_KL    = beta*-0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+            
+            loss_property = F.mse_loss(
+                estimated_label.view(-1), 
+                targets,
+                reduction="mean"
+            )
+
             loss = loss_recon + loss_KL + loss_property
+            if self.output_losses:
+                return decoded_x, estimated_label, mu, logvar, loss_recon, loss_KL, loss_property
         
         return decoded_x, estimated_label, mu, logvar, loss
 
 
 if __name__ == "__main__":
 
-    logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=logging.INFO)
 
     test = Test(37,
                 9)
