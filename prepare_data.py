@@ -17,13 +17,13 @@ class Zinc250kDataset(Dataset):
         super().__init__()
 
         self.data = molecules
-        self.properties = torch.tensor(properties)
+        self.targets = torch.tensor(properties)
 
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, idx):
-        return self.data[idx], self.properties[idx].float()
+        return self.data[idx], self.targets[idx].float()
 
 # class to prepare 
 # - convert to indices
