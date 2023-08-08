@@ -369,7 +369,7 @@ class Test(nn.Module):
         return tot
 
     def get_tensor_devices(self):
-        return [p for p in self.parameters()]
+        return [p.device for p in self.parameters()]
 
     def forward(self, 
                 idx:torch.Tensor, 

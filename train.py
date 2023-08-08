@@ -94,11 +94,13 @@ if __name__=="__main__":
     # send data and model(s) to device
     train_loader.dataset.data.to(device)
     train_loader.dataset.targets.to(device)
+    _, tst = next(iter(train_loader))
+    print(f"tst device = {tst[0].device}")
     testnn.to(device)
 
     print(f"number of parameters in model: {testnn.count_parameters()}")
     print(f"devices being used: {testnn.get_tensor_devices()}")
-    
+    # usr_input = input("continue?")
     losses = {"iteration": [],
               "recon": [],
               "kl": [],
