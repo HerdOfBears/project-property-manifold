@@ -362,10 +362,14 @@ class Test(nn.Module):
         self.ff  = ff
 
     def count_parameters(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+        tot = 0
+        for p in self.parameters():
+            if p.requires_grad:
+                tot += p.numel()
+        return tot
 
     def get_tensor_devices(self):
-        return [p.device for p in self.parameters()]
+        return [p for p in self.parameters()]
 
     def forward(self, 
                 idx:torch.Tensor, 
@@ -378,7 +382,9 @@ class Test(nn.Module):
         last_non_pad_idxs = torch.sum(idx != self.padding_idx, dim=1) - 1
         logging.info(f"Test fwd")
         logging.info(f"{last_non_pad_idxs=}")
-
+        print(f"device of idx: {idx.device}")
+        print(f"device of last_non_pad_idxs: {last_non_pad_idxs.device}")
+        print(f"device of embd: {self.embedding.weight.device}")
         if self.one_hot_encoding:
             x = F.one_hot(idx, self.alphabet_size).float() # (batch_size, T, alphabet_size)
         else:
