@@ -360,9 +360,13 @@ class Test(nn.Module):
         ff = FeedForward(self.latent_dim, 4, 1)
         self.vae = vae
         self.ff  = ff
-        
-        # super().__init__(vae, ff)
-    
+
+    def count_parameters(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+    def get_tensor_devices(self):
+        return [p.device for p in self.parameters()]
+
     def forward(self, 
                 idx:torch.Tensor, 
                 targets:torch.Tensor=None

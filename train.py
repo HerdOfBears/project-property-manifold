@@ -96,6 +96,9 @@ if __name__=="__main__":
     train_loader.dataset.targets.to(device)
     testnn.to(device)
 
+    print(f"number of parameters in model: {testnn.count_parameters()}")
+    print(f"devices being used: {testnn.get_tensor_devices()}")
+    
     losses = {"iteration": [],
               "recon": [],
               "kl": [],
