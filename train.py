@@ -11,9 +11,10 @@ import sys
 import logging
 
 from tqdm import tqdm
+from torch.utils.data import DataLoader, Dataset
 
 # custom imports
-from prepare_data import Zinc250k
+from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
 
 def training_loop(
@@ -75,8 +76,40 @@ if __name__=="__main__":
 
     print(f"max length in the dataset: {data.max_len}")
     print(f"alphabet size: {data.alphabet_size}")
+    #######################
     # create data loaders
-    train_loader, valid_loader, test_loader = data.create_data_splits()
+    #######################
+    # train_loader, valid_loader, test_loader = data.create_data_splits()
+    train_data, valid_data, test_data, train_targets, valid_targets, test_targets = data.create_data_splits()
+    # train_dataloader, valid_dataloader, test_dataloader = dataset.create_data_splits()
+
+    print(f"length of train_data: {len(train_data)}")
+    print(F"length of train_targets: {len(train_targets)}")
+
+    train_data = Zinc250kDataset(train_data, train_targets)
+    valid_data = Zinc250kDataset(valid_data, valid_targets) 
+    test_data  = Zinc250kDataset( test_data,  test_targets)
+
+    generator = torch.Generator().manual_seed(42)
+
+    train_loader = DataLoader(
+        train_data,
+        batch_size=32,
+        shuffle=True,
+        generator=generator
+    )
+    valid_loader = DataLoader(
+        valid_data,
+        batch_size=32,
+        shuffle=True,
+        generator=generator
+    )
+    test_loader = DataLoader(
+        test_data,
+        batch_size=32,
+        shuffle=True,
+        generator=generator
+    )
 
 
     #######################
@@ -92,8 +125,8 @@ if __name__=="__main__":
     #######################
 
     # send data and model(s) to device
-    train_loader.dataset.data.to(device)
-    train_loader.dataset.targets.to(device)
+    train_data.data.to(device)
+    train_data.targets.to(device)
     _, tst = next(iter(train_loader))
     print(f"tst device = {tst[0].device}")
     testnn.to(device)

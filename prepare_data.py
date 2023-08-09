@@ -146,35 +146,42 @@ class Zinc250k():
         # create torch dataset objects
         logging.warning(f"using logP as a hard-coded property. This should be changed to an argumnet. ")
         property_name = "logP"
-        train_data = Zinc250kDataset(self.encoded_smiles[train_idxs], self.data[property_name].values[train_idxs])
-        valid_data = Zinc250kDataset(self.encoded_smiles[valid_idxs], self.data[property_name].values[valid_idxs])
-        test_data  = Zinc250kDataset(self.encoded_smiles[ test_idxs], self.data[property_name].values[ test_idxs])
-
-        train_loader = DataLoader(
-            train_data,
-            batch_size=32,
-            shuffle=True,
-            generator=generator
+        return (self.encoded_smiles[train_idxs], 
+                self.encoded_smiles[valid_idxs],
+                self.encoded_smiles[ test_idxs],
+                self.data[property_name].values[train_idxs],
+                self.data[property_name].values[valid_idxs],
+                self.data[property_name].values[ test_idxs]
         )
-        valid_loader = DataLoader(
-            valid_data,
-            batch_size=32,
-            shuffle=True,
-            generator=generator
-        )
-        test_loader = DataLoader(
-            test_data,
-            batch_size=32,
-            shuffle=True,
-            generator=generator
-        )
+        # train_data = Zinc250kDataset(self.encoded_smiles[train_idxs], self.data[property_name].values[train_idxs])
+        # valid_data = Zinc250kDataset(self.encoded_smiles[valid_idxs], self.data[property_name].values[valid_idxs])
+        # test_data  = Zinc250kDataset(self.encoded_smiles[ test_idxs], self.data[property_name].values[ test_idxs])
 
-        logging.warning("datasets are hosted on CPU, not GPU")
+        # train_loader = DataLoader(
+        #     train_data,
+        #     batch_size=32,
+        #     shuffle=True,
+        #     generator=generator
+        # )
+        # valid_loader = DataLoader(
+        #     valid_data,
+        #     batch_size=32,
+        #     shuffle=True,
+        #     generator=generator
+        # )
+        # test_loader = DataLoader(
+        #     test_data,
+        #     batch_size=32,
+        #     shuffle=True,
+        #     generator=generator
+        # )
 
-        if verbose:
-            return train_loader, valid_loader, test_loader, train_data, valid_data, test_data
-        else:
-            return train_loader, valid_loader, test_loader
+        # logging.warning("datasets are hosted on CPU, not GPU")
+
+        # if verbose:
+        #     return train_loader, valid_loader, test_loader, train_data, valid_data, test_data
+        # else:
+        #     return train_loader, valid_loader, test_loader
 
     
 if __name__ == "__main__":
@@ -189,10 +196,38 @@ if __name__ == "__main__":
 
     logging.info(dataset.data.head())
     print(f"max length in the dataset: {dataset.max_len}")
+    train_data, valid_data, test_data, train_targets, valid_targets, test_targets = dataset.create_data_splits()
+    # train_dataloader, valid_dataloader, test_dataloader = dataset.create_data_splits()
 
-    train_dataloader, valid_dataloader, test_dataloader = dataset.create_data_splits()
+    print(f"length of train_data: {len(train_data)}")
+    print(F"length of train_targets: {len(train_targets)}")
 
-    print(f"length of train_data: {len(train_dataloader)}")
-    print(f"length of valid_data: {len(valid_dataloader)}")
-    print(f"length of test_data:  {len( test_dataloader)}")
+    train_data = Zinc250kDataset(train_data, train_targets)
+    valid_data = Zinc250kDataset(valid_data, valid_targets) 
+    test_data  = Zinc250kDataset( test_data,  test_targets)
+
+    generator = torch.Generator().manual_seed(42)
+    train_loader = DataLoader(
+        train_data,
+        batch_size=32,
+        shuffle=True,
+        generator=generator
+    )
+    valid_loader = DataLoader(
+        valid_data,
+        batch_size=32,
+        shuffle=True,
+        generator=generator
+    )
+    test_loader = DataLoader(
+        test_data,
+        batch_size=32,
+        shuffle=True,
+        generator=generator
+    )
+
+
+    # print(f"length of train_data: {len(train_dataloader)}")
+    # print(f"length of valid_data: {len(valid_dataloader)}")
+    # print(f"length of test_data:  {len( test_dataloader)}")
     
