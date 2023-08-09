@@ -92,6 +92,10 @@ if __name__=="__main__":
 
     generator = torch.Generator().manual_seed(42)
 
+
+    train_data.to(device)
+
+
     train_loader = DataLoader(
         train_data,
         batch_size=32,
