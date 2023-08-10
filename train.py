@@ -60,8 +60,8 @@ def training_loop(
         return losses
 
 if __name__=="__main__":
-    logging.basicConfig(level=logging.INFO)
-    N_EPOCHS = 1
+    # logging.basicConfig(level=logging.INFO)
+    N_EPOCHS = 2
     
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
