@@ -10,6 +10,7 @@ import os
 import sys
 import logging
 import time
+import argparse
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader, Dataset
@@ -61,9 +62,36 @@ def training_loop(
         return losses
 
 if __name__=="__main__":
-    # logging.basicConfig(level=logging.INFO)
-    N_EPOCHS = 2
-    
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs",     type=int,   default=2)
+    parser.add_argument("--batch_size", type=int,   default=32)
+    parser.add_argument("--lr",         type=float, default=1e-3)
+    parser.add_argument("--logging",    type=str,   default="WARNING", 
+                        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    )
+
+    args = parser.parse_args()
+
+    LOGGING_LEVEL = args.logging
+    if LOGGING_LEVEL == "DEBUG":
+        logging.basicConfig(level=logging.DEBUG)
+    elif LOGGING_LEVEL == "INFO":
+        logging.basicConfig(level=logging.INFO)
+    elif LOGGING_LEVEL == "WARNING":
+        logging.basicConfig(level=logging.WARNING)
+    elif LOGGING_LEVEL == "ERROR":
+        logging.basicConfig(level=logging.ERROR)
+    elif LOGGING_LEVEL == "CRITICAL":
+        logging.basicConfig(level=logging.CRITICAL)
+
+    #######################
+    # HYPERPARAMETERS
+    #######################
+    N_EPOCHS = args.epochs # n times through training loader
+    BATCH_SIZE = args.batch_size 
+    LR = args.lr # learning rate
+    print(f"n_epochs: {N_EPOCHS}, batch_size: {BATCH_SIZE}, lr: {LR}")
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"using device: {device}")
@@ -95,19 +123,19 @@ if __name__=="__main__":
 
     train_loader = DataLoader(
         train_data,
-        batch_size=32,
+        batch_size=BATCH_SIZE,
         shuffle=True,
         generator=generator
     )
     valid_loader = DataLoader(
         valid_data,
-        batch_size=32,
+        batch_size=BATCH_SIZE,
         shuffle=True,
         generator=generator
     )
     test_loader = DataLoader(
         test_data,
-        batch_size=32,
+        batch_size=BATCH_SIZE,
         shuffle=True,
         generator=generator
     )
@@ -149,7 +177,7 @@ if __name__=="__main__":
         # perform training loop
         losses_ = training_loop(train_loader, 
                     testnn, 
-                    optim.SGD(testnn.parameters(), lr=1e-3),
+                    optim.SGD(testnn.parameters(), lr=LR),
                     epoch=epoch,
                     return_losses=True)
         
