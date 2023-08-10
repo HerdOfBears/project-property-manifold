@@ -125,8 +125,8 @@ if __name__=="__main__":
     #######################
 
     # send data and model(s) to device
-    train_data.data.to(device)
-    train_data.targets.to(device)
+    train_data.data    = train_data.data.to(   device)
+    train_data.targets = train_data.targets.to(device)
     tst0, tst1 = next(iter(train_loader))
     print(f"tst0 device = {tst0.device}")
     print(f"tst1 device = {tst1.device}")
