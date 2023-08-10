@@ -382,9 +382,9 @@ class Test(nn.Module):
         last_non_pad_idxs = torch.sum(idx != self.padding_idx, dim=1) - 1
         logging.info(f"Test fwd")
         logging.info(f"{last_non_pad_idxs=}")
-        print(f"device of idx: {idx.device}")
-        print(f"device of last_non_pad_idxs: {last_non_pad_idxs.device}")
-        print(f"device of embd: {self.embedding.weight.device}")
+        logging.info(f"device of idx: {idx.device}")
+        logging.info(f"device of last_non_pad_idxs: {last_non_pad_idxs.device}")
+        logging.info(f"device of embd: {self.embedding.weight.device}")
         if self.one_hot_encoding:
             x = F.one_hot(idx, self.alphabet_size).float() # (batch_size, T, alphabet_size)
         else:
@@ -423,7 +423,7 @@ class Test(nn.Module):
 
 if __name__ == "__main__":
 
-    # logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
 
     test = Test(37,
                 9)

@@ -60,7 +60,7 @@ def training_loop(
         return losses
 
 if __name__=="__main__":
-    # logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
     N_EPOCHS = 1
     
     
