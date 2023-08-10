@@ -9,6 +9,7 @@ import pickle as pkl
 import os
 import sys
 import logging
+import time
 
 from tqdm import tqdm
 from torch.utils.data import DataLoader, Dataset
@@ -143,6 +144,7 @@ if __name__=="__main__":
     print("starting training loop")
     for epoch in range(N_EPOCHS):
         print(f"epoch {epoch}")
+        t0 = time.time()
 
         # perform training loop
         losses_ = training_loop(train_loader, 
@@ -151,6 +153,7 @@ if __name__=="__main__":
                     epoch=epoch,
                     return_losses=True)
         
+        print(f"epoch time: {round(time.time() - t0, 4)}s")
         # update losses
         for key in losses.keys():
             losses[key] += losses_[key]
