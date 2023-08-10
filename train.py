@@ -92,9 +92,8 @@ if __name__=="__main__":
 
     generator = torch.Generator().manual_seed(42)
 
-
+    
     train_data.to(device)
-
 
     train_loader = DataLoader(
         train_data,
@@ -131,8 +130,9 @@ if __name__=="__main__":
     # send data and model(s) to device
     train_data.data.to(device)
     train_data.targets.to(device)
-    _, tst = next(iter(train_loader))
-    print(f"tst device = {tst[0].device}")
+    tst0, tst1 = next(iter(train_loader))
+    print(f"tst0 device = {tst0.device}")
+    print(f"tst1 device = {tst1.device}")
     testnn.to(device)
 
     print(f"number of parameters in model: {testnn.count_parameters()}")
