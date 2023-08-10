@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=def-rmansbac
+#SBATCH --account=rrg-rmansbac
 #SBATCH --time=0-00:05:00
 #SBATCH --job-name="test-run"
 #SBATCH --nodes=1
