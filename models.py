@@ -172,6 +172,10 @@ class Decoder(nn.Module):
         
         self.out = nn.Linear(latent_dim, vocab_size)
         
+        # self.decoder_start_state = torch.ones(
+        #     (batch_size,1), 
+        #     dtype=torch.long
+        # ) # <SOM> token is number 1.
     
     def forward(self, 
                 x:torch.Tensor, 
@@ -199,7 +203,8 @@ class Decoder(nn.Module):
         logging.info(f"decoder assumes <SOM> token is 1")
         decoder_input = torch.ones(
             (batch_size,1), 
-            dtype=torch.long
+            dtype=torch.long,
+            device=x.device
         ) # <SOM> token is number 1.
         decoder_hidden = context.unsqueeze(0) # (1, batch_size, latent_dim)
         logging.info(f"initial {decoder_hidden.shape=}")
