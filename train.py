@@ -70,6 +70,8 @@ if __name__=="__main__":
     parser.add_argument("--logging",    type=str,   default="WARNING", 
                         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
     )
+    parser.add_argument("--chkpt_dir",  type=str,   default="./checkpoints")
+    parser.add_argument("--chkpt_freq", type=int,   default=-1)
 
     args = parser.parse_args()
 
@@ -91,9 +93,16 @@ if __name__=="__main__":
     N_EPOCHS = args.epochs # n times through training loader
     BATCH_SIZE = args.batch_size 
     LR = args.lr # learning rate
-    print(f"n_epochs: {N_EPOCHS}, batch_size: {BATCH_SIZE}, lr: {LR}")
+    CHKPT_DIR = args.chkpt_dir
     
+    if args.chkpt_freq > 0:
+        CHKPT_FREQ = args.chkpt_freq 
+    else:
+        CHKPT_FREQ = N_EPOCHS
+    print(f"n_epochs: {N_EPOCHS}, batch_size: {BATCH_SIZE}, lr: {LR}")
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     print(f"using device: {device}")
     print("running training script...")
     print("constructing data class")
@@ -182,8 +191,14 @@ if __name__=="__main__":
                     return_losses=True)
         
         print(f"epoch time: {round(time.time() - t0, 4)}s")
+        
         # update losses
         for key in losses.keys():
             losses[key] += losses_[key]
+        
+        # save model checkpoint
+        if (epoch % (CHKPT_FREQ-1)) == 0:
+            logging.info(f"saving checkpoint at epoch {epoch}")
+            torch.save(testnn.state_dict(), f"{CHKPT_DIR}/testnn_{epoch}.pt")
 
     pkl.dump(losses, open("./losses.pkl", "wb"))
