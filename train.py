@@ -21,7 +21,8 @@ from models import Test
 
 def initialize_weights(m):
     torch.nn.init.xavier_uniform_(m.weight)
-    m.bias.data.fill_(0.01)
+    if not isinstance(m, nn.Embedding):
+        m.bias.data.fill_(0.01)
 
 def training_loop(
                 training_data,
@@ -134,6 +135,7 @@ if __name__=="__main__":
     generator = torch.Generator().manual_seed(42)
     # initialize_weights_one_arg = lambda x: initialize_weights(x, generator=generator)
     
+
     #######################
     # create data loaders
     #######################
