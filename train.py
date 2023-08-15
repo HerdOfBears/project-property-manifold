@@ -19,13 +19,9 @@ from torch.utils.data import DataLoader, Dataset
 from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
 
-def initialize_weights(m, generator=None):
-    if generator is None:
-        torch.nn.init.xavier_uniform_(m.weight)
-        m.bias.data.fill_(0.01)
-    else:
-        torch.nn.init.xavier_uniform_(m.weight, generator=generator)
-        m.bias.data.fill_(0.01)
+def initialize_weights(m):
+    torch.nn.init.xavier_uniform_(m.weight)
+    m.bias.data.fill_(0.01)
 
 def training_loop(
                 training_data,
@@ -115,6 +111,7 @@ if __name__=="__main__":
     print(f"n_epochs: {N_EPOCHS}, batch_size: {BATCH_SIZE}, lr: {LR}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    torch.manual_seed(42)
 
     print(f"using device: {device}")
     print("running training script...")
