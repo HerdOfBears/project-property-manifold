@@ -86,6 +86,7 @@ if __name__=="__main__":
     parser.add_argument("--chkpt_freq", type=int,   default=-1)
     parser.add_argument("--n_latent",   type=int,   default=4)
     parser.add_argument("--n_embd",     type=int,   default=10)
+    parser.add_argument("--n_hidden_prop", type=int, default=10)
 
     args = parser.parse_args()
 
@@ -111,7 +112,8 @@ if __name__=="__main__":
 
     N_EMBD = args.n_embd
     N_LATENT = args.n_latent
-    
+    N_HIDDEN_PROP = args.n_hidden_prop
+
     if args.chkpt_freq > 0:
         CHKPT_FREQ = args.chkpt_freq 
     else:
@@ -186,6 +188,7 @@ if __name__=="__main__":
     testnn = Test(data.alphabet_size,
                   n_latent=N_LATENT,
                   n_embd=N_EMBD,
+                  n_hidden_prop=N_HIDDEN_PROP,
                   output_losses=True)
     
     # initialize weights

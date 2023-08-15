@@ -342,6 +342,7 @@ class Test(nn.Module):
                  alphabet_size:int,
                  n_latent:int,
                  n_embd:int,
+                 n_hidden_prop:int,
                  one_hot_encoding:bool=False,
                  output_losses:bool=False,
                  generator:torch.Generator=None) -> None:
@@ -366,7 +367,7 @@ class Test(nn.Module):
         decoder = Decoder(alphabet_size, n_embd, self.latent_dim)
 
         vae = VAESkeleton(encoder, decoder)
-        ff = FeedForward(self.latent_dim, 4, 1)
+        ff = FeedForward(self.latent_dim, n_hidden_prop, 1)
         self.vae = vae
         self.ff  = ff
 
