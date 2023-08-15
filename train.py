@@ -19,6 +19,14 @@ from torch.utils.data import DataLoader, Dataset
 from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
 
+def initialize_weights(m, generator=None):
+    if generator is None:
+        torch.nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.01)
+    else:
+        torch.nn.init.xavier_uniform_(m.weight, generator=generator)
+        m.bias.data.fill_(0.01)
+
 def training_loop(
                 training_data,
                 model,
@@ -114,12 +122,23 @@ if __name__=="__main__":
 
     print(f"max length in the dataset: {data.max_len}")
     print(f"alphabet size: {data.alphabet_size}")
+    
+    
+    #######################
+    # Set seed for replicability and construct initialization fn
+    #######################
+    # a lambda function is req'd here because module.apply(fn) 
+    # takes a fn with only one argument but we want a defined generator
+    generator = torch.Generator().manual_seed(42)
+    initialize_weights_one_arg = lambda x: initialize_weights(x, generator=generator)
+    
     #######################
     # create data loaders
     #######################
     # train_loader, valid_loader, test_loader = data.create_data_splits()
-    train_data, valid_data, test_data, train_targets, valid_targets, test_targets = data.create_data_splits()
-    # train_dataloader, valid_dataloader, test_dataloader = dataset.create_data_splits()
+    train_data, valid_data, test_data, train_targets, valid_targets, test_targets = data.create_data_splits(
+        generator=generator
+    )
 
     print(f"length of train_data: {len(train_data)}")
     print(F"length of train_targets: {len(train_targets)}")
@@ -128,7 +147,6 @@ if __name__=="__main__":
     valid_data = Zinc250kDataset(valid_data, valid_targets) 
     test_data  = Zinc250kDataset( test_data,  test_targets)
 
-    generator = torch.Generator().manual_seed(42)
 
     train_loader = DataLoader(
         train_data,
@@ -158,6 +176,10 @@ if __name__=="__main__":
                   9,
                   output_losses=True)
     
+    # initialize weights
+    testnn.apply(initialize_weights_one_arg)
+    print("weights initialized")
+
     #######################
     # train
     #######################
