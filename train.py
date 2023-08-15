@@ -20,9 +20,16 @@ from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
 
 def initialize_weights(m):
-    torch.nn.init.xavier_uniform_(m.weight)
-    if not isinstance(m, nn.Embedding):
-        m.bias.data.fill_(0.01)
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight)
+        torch.nn.init.xavier_uniform_(m.bias)
+    elif isinstance(m, nn.Embedding):
+        torch.nn.init.xavier_uniform_(m.weight)
+    elif isinstance(m, nn.RNN):
+        torch.nn.init.xavier_uniform_(m.weight_ih_l)
+        torch.nn.init.xavier_uniform_(m.weight_hh_l)
+        torch.nn.init.xavier_uniform_(m.bias_ih_l)
+        torch.nn.init.xavier_uniform_(m.bias_hh_l)
 
 def training_loop(
                 training_data,
