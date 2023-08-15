@@ -26,10 +26,10 @@ def initialize_weights(m):
     elif isinstance(m, nn.Embedding):
         torch.nn.init.xavier_uniform_(m.weight)
     elif isinstance(m, nn.RNN):
-        torch.nn.init.xavier_uniform_(m.weight_ih_l)
-        torch.nn.init.xavier_uniform_(m.weight_hh_l)
-        torch.nn.init.xavier_uniform_(m.bias_ih_l)
-        torch.nn.init.xavier_uniform_(m.bias_hh_l)
+        torch.nn.init.xavier_uniform_(m.weight_ih_l0)
+        torch.nn.init.xavier_uniform_(m.weight_hh_l0)
+        torch.nn.init.xavier_uniform_(m.bias_ih_l0)
+        torch.nn.init.xavier_uniform_(m.bias_hh_l0)
 
 def training_loop(
                 training_data,
