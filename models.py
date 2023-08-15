@@ -340,16 +340,20 @@ class pcVAE(nn.Module):
 class Test(nn.Module):
     def __init__(self,
                  alphabet_size:int,
+                 n_latent:int,
                  n_embd:int,
                  one_hot_encoding:bool=False,
-                 output_losses:bool=False) -> None:
+                 output_losses:bool=False,
+                 generator:torch.Generator=None) -> None:
         super().__init__()
-        self.latent_dim = 4
+        self.latent_dim = n_latent
         self.one_hot_encoding = one_hot_encoding
         self.padding_idx = 0 
         self.output_losses = output_losses
-
         self.embedding = nn.Embedding(alphabet_size, n_embd)
+
+        if self.one_hot_encoding:
+            logging.warning("one-hot encoding disabled")
         # if not one_hot_encoding:
         #     self.embedding = nn.Embedding(alphabet_size, n_embd)
         # else:
