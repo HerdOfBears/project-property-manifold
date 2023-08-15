@@ -132,7 +132,7 @@ if __name__=="__main__":
     # a lambda function is req'd here because module.apply(fn) 
     # takes a fn with only one argument but we want a defined generator
     generator = torch.Generator().manual_seed(42)
-    initialize_weights_one_arg = lambda x: initialize_weights(x, generator=generator)
+    # initialize_weights_one_arg = lambda x: initialize_weights(x, generator=generator)
     
     #######################
     # create data loaders
@@ -180,7 +180,7 @@ if __name__=="__main__":
                   output_losses=True)
     
     # initialize weights
-    testnn.apply(initialize_weights_one_arg)
+    testnn.apply(initialize_weights)
     print("weights initialized")
 
     #######################
