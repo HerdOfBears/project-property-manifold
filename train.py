@@ -22,14 +22,14 @@ from models import Test
 def initialize_weights(m):
     if isinstance(m, nn.Linear):
         torch.nn.init.xavier_uniform_(m.weight)
-        torch.nn.init.xavier_uniform_(m.bias)
+        m.bias.data.zero_()
     elif isinstance(m, nn.Embedding):
         torch.nn.init.xavier_uniform_(m.weight)
     elif isinstance(m, nn.RNN):
         torch.nn.init.xavier_uniform_(m.weight_ih_l0)
         torch.nn.init.xavier_uniform_(m.weight_hh_l0)
-        torch.nn.init.xavier_uniform_(m.bias_ih_l0)
-        torch.nn.init.xavier_uniform_(m.bias_hh_l0)
+        m.bias_ih_l0.data.zero_()
+        m.bias_hh_l0.data.zero_()
 
 def training_loop(
                 training_data,
