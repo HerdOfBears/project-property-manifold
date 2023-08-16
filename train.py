@@ -18,6 +18,7 @@ from torch.utils.data import DataLoader, Dataset
 # custom imports
 from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
+from rnn_models import RNNVae
 
 def initialize_weights(m):
     if isinstance(m, nn.Linear):
@@ -30,6 +31,12 @@ def initialize_weights(m):
         torch.nn.init.xavier_uniform_(m.weight_hh_l0)
         m.bias_ih_l0.data.zero_()
         m.bias_hh_l0.data.zero_()
+    elif type(m) == nn.GRU:
+        for param in m._flat_weights_names:
+            if "weight" in param:
+                nn.init.xavier_uniform_(m._parameters[param])
+            elif "bias" in param:
+                m._parameters[param].data.zero_()
 
 def training_loop(
                 training_data,
@@ -86,6 +93,7 @@ if __name__=="__main__":
     parser.add_argument("--chkpt_freq", type=int,   default=-1)
     parser.add_argument("--n_latent",   type=int,   default=4)
     parser.add_argument("--n_embd",     type=int,   default=10)
+    parser.add_argument("--n_model",    type=int,   default=8)
     parser.add_argument("--n_hidden_prop", type=int, default=10)
 
     args = parser.parse_args()
@@ -112,6 +120,7 @@ if __name__=="__main__":
 
     N_EMBD = args.n_embd
     N_LATENT = args.n_latent
+    N_MODEL  = args.n_model
     N_HIDDEN_PROP = args.n_hidden_prop
 
     if args.chkpt_freq > 0:
@@ -195,6 +204,11 @@ if __name__=="__main__":
     
     # initialize weights
     testnn.apply(initialize_weights)
+    model = RNNVae(data.alphabet_size,
+                   N_MODEL,
+                   N_LATENT,
+                   generator=generator)
+    model.apply(initialize_weights)
     print("weights initialized")
 
     #######################
@@ -224,8 +238,8 @@ if __name__=="__main__":
 
         # perform training loop
         losses_ = training_loop(train_loader, 
-                    testnn, 
-                    optim.SGD(testnn.parameters(), lr=LR),
+                    model, 
+                    optim.SGD(model.parameters(), lr=LR),
                     epoch=epoch,
                     return_losses=True)
         
@@ -238,6 +252,6 @@ if __name__=="__main__":
         # save model checkpoint
         if (epoch % (CHKPT_FREQ-1)) == 0:
             logging.info(f"saving checkpoint at epoch {epoch}")
-            torch.save(testnn.state_dict(), f"{CHKPT_DIR}/testnn_{epoch}.pt")
+            torch.save(model.state_dict(), f"{CHKPT_DIR}/rnnvae_{epoch}.pt")
 
-    pkl.dump(losses, open("./losses.pkl", "wb"))
+    pkl.dump(losses, open("./losses_rnnvae.pkl", "wb"))
