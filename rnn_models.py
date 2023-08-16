@@ -55,14 +55,27 @@ class RNNVae(nn.Module):
         self.dec_embd = nn.Embedding(d_input, d_model)
 
         # encoder
-        self.gru_enc = GRUBlock(d_model, d_model, num_layers, dropout)
-
+        # self.gru_enc = GRUBlock(d_model, d_model, num_layers, dropout)
+        self.gru_enc = nn.GRU(
+                            d_model, 
+                            d_model, 
+                            num_layers=num_layers, 
+                            dropout=dropout, 
+                            batch_first=True
+        )
         # full connected layer leading to mu and logvar
         self.fc = nn.Linear(d_model, 2*d_latent)
         
         # decoder
         self.fc_invproj = nn.Linear(d_latent, d_model)
-        self.gru_dec = GRUBlock(d_model, d_model, num_layers, dropout)
+        # self.gru_dec = GRUBlock(d_model, d_model, num_layers, dropout)
+        self.gru_dec = nn.GRU(
+                            d_model, 
+                            d_model, 
+                            num_layers=num_layers, 
+                            dropout=dropout, 
+                            batch_first=True
+        )
 
         self.fc_out  = nn.Linear(d_model, d_input)
 
