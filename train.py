@@ -253,6 +253,6 @@ if __name__=="__main__":
         # save model checkpoint
         if (epoch % (CHKPT_FREQ-1)) == 0:
             logging.info(f"saving checkpoint at epoch {epoch}")
-            torch.save(model.state_dict(), f"{CHKPT_DIR}/rnnvae_{epoch}.pt")
+            torch.save(model.state_dict(), f"{CHKPT_DIR}/{model.name}-epoch{epoch}.pt")
 
-    pkl.dump(losses, open("./losses_rnnvae.pkl", "wb"))
+    pkl.dump(losses, open(f"./losses_{model.name}.pkl", "wb"))

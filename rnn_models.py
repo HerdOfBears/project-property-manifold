@@ -42,6 +42,7 @@ class RNNVae(nn.Module):
         RNN VAE with GRU encoder and decoder
         """
         super(RNNVae, self).__init__()
+        self.name = f"rnn-vae-dLatent{d_latent}-dModel{d_model}-numGRUlayers{num_layers}"
         self.d_input  = d_input
         self.d_model  = d_model
         self.d_latent = d_latent
