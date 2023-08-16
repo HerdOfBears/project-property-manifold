@@ -47,6 +47,7 @@ class RNNVae(nn.Module):
         self.d_latent = d_latent
         self.num_layers = num_layers # (for rnn cells)
         self.dropout = dropout
+        self.generator = generator
 
         self.output_losses = True # to work with training_loop() in train.py
 
