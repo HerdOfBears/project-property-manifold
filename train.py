@@ -221,7 +221,8 @@ if __name__=="__main__":
     tst0, tst1 = next(iter(train_loader))
     print(f"tst0 device = {tst0.device}")
     print(f"tst1 device = {tst1.device}")
-    testnn.to(device)
+    # testnn.to(device)
+    model.to(device)
 
     print(f"number of parameters in model: {testnn.count_parameters()}")
     print(f"devices being used: {testnn.get_tensor_devices()}")
