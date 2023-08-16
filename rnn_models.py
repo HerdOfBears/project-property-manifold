@@ -105,7 +105,14 @@ class RNNVae(nn.Module):
         x is usually start token
         z is latent vector
         """
-        outputs, hlast = self.gru_dec(x, z) # (batch_size, 1, d_model), (, d_latent) -> (batch_size, T, d_model)
+        if z is None:
+            z = torch.randn(self.num_layers, 
+                             x.size(0), 
+                             self.d_model, 
+                             generator=self.generator
+            ).to(x.device)
+
+        outputs, hlast = self.gru_dec(x, z) # (bsz, T-1, d_model), (n_layers, bsz, d_latent) -> (bsz, T-1, d_model)
         return outputs, hlast
 
     def reparameterize(self, mu, logvar):
@@ -133,7 +140,8 @@ class RNNVae(nn.Module):
         # embed the sequence of indices (for decoder) | note T-1 b/c we want to predict the next token
         idx = self.dec_embd(x[:,:-1]) # (bsz, T-1) -> (bsz, T-1, d_model)
 
-        outputs, hlast = self.decode(idx, context) # (bsz, T-1, d_model), (bsz, d_model) -> (bsz, T-1, d_model), (n_layers, T-1, d_model)
+        context = context.unsqueeze(1).repeat(1, idx.size(1), 1) # (bsz, d_model) -> (bsz, T-1, d_model)
+        outputs, hlast = self.decode(context) # (bsz, T-1, d_model), () -> (bsz, T-1, d_model), (n_layers, T-1, d_model)
         logits = self.fc_out(outputs)              # (bsz, T-1, d_model) -> (batch_size, T-1, d_input)        
         
         BCE, KLD, loss_pp = self.loss(x, logits, mu, logvar)
