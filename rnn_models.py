@@ -49,7 +49,8 @@ class RNNVae(nn.Module):
         self.num_layers = num_layers # (for rnn cells)
         self.dropout = dropout
         self.generator = generator
-
+        self.padding_idx = 0
+        logging.warning(f"padding idx is assumed to be {self.padding_idx} and is ignored in loss function")        
         self.output_losses = True # to work with training_loop() in train.py
 
         self.embd = nn.Embedding(d_input, d_model)
@@ -156,7 +157,8 @@ class RNNVae(nn.Module):
         BCE = F.cross_entropy(
             x_recon.view(-1, self.d_input), # (bsz * (T-1), d_input) 
             x[:,1:].reshape(-1), # (bsz * (T-1)) 
-            reduction='mean'
+            reduction='mean',
+            ignore_index=self.padding_idx
         )
 
         KLD = -0.5 * beta* torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
