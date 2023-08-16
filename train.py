@@ -207,6 +207,7 @@ if __name__=="__main__":
     model = RNNVae(data.alphabet_size,
                    N_MODEL,
                    N_LATENT,
+                   num_layers=3,
                    generator=generator)
     model.apply(initialize_weights)
     print("weights initialized")
@@ -232,6 +233,8 @@ if __name__=="__main__":
               "kl": [],
               "prop": []}
     
+    optimizer = optim.Adam(model.parameters(), lr=LR)
+
     print("starting training loop")
     for epoch in range(N_EPOCHS):
         print(f"epoch {epoch}")
@@ -240,7 +243,7 @@ if __name__=="__main__":
         # perform training loop
         losses_ = training_loop(train_loader, 
                     model, 
-                    optim.SGD(model.parameters(), lr=LR),
+                    optimizer,
                     epoch=epoch,
                     return_losses=True)
         
