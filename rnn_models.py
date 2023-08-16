@@ -102,7 +102,7 @@ class RNNVae(nn.Module):
         eps = torch.randn_like(std)
         return mu + eps*std
 
-    def forward(self, x, h0=None):
+    def forward(self, x, prop_targets):
         """
         Forward pass of the RNN VAE
         """
@@ -110,7 +110,7 @@ class RNNVae(nn.Module):
         # embed the sequence of indices 
         tokens = self.embd(x) # (bsz, T) -> (bsz, T, d_model) | note bsz == batch_size
 
-        mu, logvar = self.encode(tokens, h0) # (bsz, T, d_model) -> (bsz, d_latent)
+        mu, logvar = self.encode(tokens) # (bsz, T, d_model) -> (bsz, d_latent)
 
         z = self.reparameterize(mu, logvar) # (bsz, d_latent)
         context = self.fc_invproj(z)        # (bsz, d_latent) -> (bsz, d_model)
