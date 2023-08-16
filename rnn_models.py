@@ -146,7 +146,7 @@ class RNNVae(nn.Module):
         
         BCE, KLD, loss_pp = self.loss(x, logits, mu, logvar)
 
-        return logits, 0.0, mu, logvar, BCE, KLD, loss_pp
+        return logits, torch.tensor(0.0), mu, logvar, BCE, KLD, loss_pp
 
     def loss(self, x, x_recon, mu, logvar, beta=1.0):
         """
@@ -154,10 +154,10 @@ class RNNVae(nn.Module):
         """
         BCE = F.cross_entropy(
             x_recon.view(-1, self.d_input), # (bsz * (T-1), d_input) 
-            x[:,1:].view(-1), # (bsz * (T-1)) 
+            x[:,1:].reshape(-1), # (bsz * (T-1)) 
             reduction='mean'
         )
 
         KLD = -0.5 * beta* torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
 
-        return BCE, KLD, 0.0
+        return BCE, KLD, torch.tensor(0.0)
