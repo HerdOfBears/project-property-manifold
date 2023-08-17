@@ -65,6 +65,9 @@ class RNNVae(nn.Module):
                             dropout=dropout, 
                             batch_first=True
         )
+        
+        self.ln_gru_enc = nn.LayerNorm(d_model)
+        
         # full connected layer leading to mu and logvar
         self.fc = nn.Linear(d_model, 2*d_latent)
         
@@ -78,7 +81,7 @@ class RNNVae(nn.Module):
                             dropout=dropout, 
                             batch_first=True
         )
-
+        self.ln_gru_dec = nn.LayerNorm(d_model)
         self.fc_out  = nn.Linear(d_model, d_input)
 
     def encode(self, idx, h0=None):
@@ -95,7 +98,9 @@ class RNNVae(nn.Module):
         _, hlast = self.gru_enc(idx, h0) # (batch_size, T, d_model) -> (batch_size, T, d_model), (n_layers, batch_size, d_model)
         
         # use the last hidden state from the last GRU layer to predict mu and logvar
-        mu_logvar = self.fc(hlast[-1]) # (batch_size, d_model) -> (batch_size, 2*d_latent)
+        mu_logvar = self.fc(
+            self.ln_gru_enc(hlast[-1])
+        ) # (batch_size, d_model) -> (batch_size, 2*d_latent)
         
         mu     = mu_logvar[:, :self.d_latent ]
         logvar = mu_logvar[:,  self.d_latent:]
@@ -144,7 +149,9 @@ class RNNVae(nn.Module):
 
         context = context.unsqueeze(1).repeat(1, idx.size(1), 1) # (bsz, d_model) -> (bsz, T-1, d_model)
         outputs, hlast = self.decode(context) # (bsz, T-1, d_model), () -> (bsz, T-1, d_model), (n_layers, T-1, d_model)
-        logits = self.fc_out(outputs)              # (bsz, T-1, d_model) -> (batch_size, T-1, d_input)        
+        logits = self.fc_out(
+            self.ln_gru_dec(outputs)
+        )              # (bsz, T-1, d_model) -> (batch_size, T-1, d_input)        
         
         BCE, KLD, loss_pp = self.loss(x, logits, mu, logvar)
 
