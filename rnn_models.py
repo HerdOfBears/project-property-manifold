@@ -37,6 +37,7 @@ class RNNVae(nn.Module):
                  d_latent, 
                  num_layers=2, 
                  dropout=0.0, 
+                 use_pp=False,
                  generator=None):
         """
         RNN VAE with GRU encoder and decoder
@@ -49,8 +50,11 @@ class RNNVae(nn.Module):
         self.num_layers = num_layers # (for rnn cells)
         self.dropout = dropout
         self.generator = generator
+        
         self.padding_idx = 0
         logging.warning(f"padding idx is assumed to be {self.padding_idx} and is ignored in loss function")        
+        
+        self.use_pp = use_pp # boolean whether to use property predictor
         self.output_losses = True # to work with training_loop() in train.py
 
         self.embd = nn.Embedding(d_input, d_model)
@@ -71,6 +75,14 @@ class RNNVae(nn.Module):
         # full connected layer leading to mu and logvar
         self.fc = nn.Linear(d_model, 2*d_latent)
         
+        # property predictor
+        if use_pp:
+            self.fc_pp = nn.Sequential(
+                nn.Linear(d_latent, 64),
+                nn.ReLU(),
+                nn.Linear(64, 1),
+            )
+
         # decoder
         self.fc_invproj = nn.Linear(d_latent, d_model)
         # self.gru_dec = GRUBlock(d_model, d_model, num_layers, dropout)
@@ -153,9 +165,21 @@ class RNNVae(nn.Module):
             self.ln_gru_dec(outputs)
         )              # (bsz, T-1, d_model) -> (batch_size, T-1, d_input)        
         
-        BCE, KLD, loss_pp = self.loss(x, logits, mu, logvar)
 
-        return logits, torch.tensor(0.0), mu, logvar, BCE, KLD, loss_pp
+        # property predictor
+        if self.use_pp:
+            prop_pred = self.fc_pp(z) # (bsz, d_latent) -> (bsz, 1)
+            loss_pp = F.mse_loss(
+                prop_pred, 
+                prop_targets.unsqueeze(1),
+                reduction='mean'
+            )
+        else:
+            prop_pred = None
+            loss_pp = torch.tensor(0.0)
+        BCE, KLD, _ = self.loss(x, logits, mu, logvar)
+
+        return logits, prop_pred, mu, logvar, BCE, KLD, loss_pp
 
     def loss(self, x, x_recon, mu, logvar, beta=1.0):
         """

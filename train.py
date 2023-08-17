@@ -57,10 +57,10 @@ def training_loop(
 
         # forward
         if model.output_losses:
-            recon_x, output, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, bch_y)
+            recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, bch_y)
             loss_tot = loss_recon + loss_kl + loss_prop
         else:
-            recon_x, output, means_, logvars_, loss_tot = model(bch_x, bch_y)
+            recon_x, output_pp, means_, logvars_, loss_tot = model(bch_x, bch_y)
         
         # zero gradients + backward + optimize
         optimizer.zero_grad()
@@ -208,6 +208,7 @@ if __name__=="__main__":
                    N_MODEL,
                    N_LATENT,
                    num_layers=3,
+                   use_pp=True,
                    generator=generator)
     model.apply(initialize_weights)
     print("weights initialized")
