@@ -125,6 +125,7 @@ class GomezBombarelli(nn.Module):
         self.d_latent = d_hidden//2 # half of the hidden dimension is the mean, half is the variance
         self.n_gru_layers = n_gru_layers
         self.use_pp = use_pp # boolean for whether to use a property predictor
+        self.output_losses = True # to work with previous code
         logging.warning("max_length is hardcoded to 120")
         logging.warning(f"hardcoded: {self.d_pp_output=}")
         logging.warning(f"assuming one-hot encoding for inputs")
