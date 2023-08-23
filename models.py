@@ -284,57 +284,6 @@ class FeedForward(nn.Module):
         output = F.relu(self.fc1(mu))
         output = self.fc2(output)
         return output
-    
-
-# a property-constrained variational autoencoder (pc-VAE) shell
-# - init function taking VAE and FeedForward objects
-# - forward function passing through VAE and using mu as input to FeedForward
-class pcVAE(nn.Module):
-    """ 
-    a property-constrained variational autoencoder (pc-VAE) shell
-    this is a VAE with a feed-forward network
-    taking the VAE latent space (the means) as input
-    and outputting 
-        - the reconstructed molecule, 
-        - estimated labels corresponding to the encoded vectors
-        - mu, logvar
-    """
-    def __init__(self,
-                 vae:VAESkeleton,
-                 ff:FeedForward) -> None:
-
-        super(pcVAE, self).__init__()
-
-        # ensure vae and ff are registered as modules
-        # so that backprop will update their parameters
-        self.module_list = nn.ModuleList([vae, ff]) 
-
-        self.vae = vae
-        self.ff = ff
-
-    def forward(self, x:torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """ 
-        forward pass through pc-VAE. 
-        Returns 4 things: decoded x, estimated_label, mu, logvar
-        
-        input:
-            x:  array of int indices.
-                (batch_size, input_dim)
-        return: 
-            decoded x:      (batch_size, input_dim)
-            estimated_label:(batch_size, output_dim)
-            mu:             (batch_size, latent_dim)
-            logvar:         (batch_size, latent_dim)
-        """
-        if isinstance(x, torch.Tensor) is False:
-            raise TypeError("x must be a torch.Tensor")
-        
-        logging.info(f"pcVAE fwd")
-
-        decoded_x, mu, logvar = self.vae(x)
-        estimated_label = self.ff(mu)
-
-        return decoded_x, estimated_label, mu, logvar
 
 
 class Test(nn.Module):
@@ -386,7 +335,7 @@ class Test(nn.Module):
                 targets:torch.Tensor=None
                 )->tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         # idx: (batch_size, T)
-        # targets: (batch_size, 1)
+        # targets: (batch_size, 1) the properties target values
 
         # grab last non pad idxs
         last_non_pad_idxs = torch.sum(idx != self.padding_idx, dim=1) - 1

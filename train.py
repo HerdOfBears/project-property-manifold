@@ -19,6 +19,7 @@ from torch.utils.data import DataLoader, Dataset
 from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
 from rnn_models import RNNVae
+from literature_models import GomezBombarelli
 
 def initialize_weights(m):
     if isinstance(m, nn.Linear):
@@ -33,6 +34,12 @@ def initialize_weights(m):
         m.bias_hh_l0.data.zero_()
     elif type(m) == nn.GRU:
         for param in m._flat_weights_names:
+            if "weight" in param:
+                nn.init.xavier_uniform_(m._parameters[param])
+            elif "bias" in param:
+                m._parameters[param].data.zero_()
+    elif type(m) == nn.Conv1d:
+        for param in m._parameters:
             if "weight" in param:
                 nn.init.xavier_uniform_(m._parameters[param])
             elif "bias" in param:
@@ -204,12 +211,18 @@ if __name__=="__main__":
     
     # initialize weights
     testnn.apply(initialize_weights)
-    model = RNNVae(data.alphabet_size,
-                   N_MODEL,
-                   N_LATENT,
-                   num_layers=3,
-                   use_pp=True,
-                   generator=generator)
+    
+    # model = RNNVae(data.alphabet_size,
+    #                N_MODEL,
+    #                N_LATENT,
+    #                num_layers=3,
+    #                use_pp=True,
+    #                generator=generator)
+    model = GomezBombarelli(d_input =data.alphabet_size,
+                            d_output=data.alphabet_size,
+                            use_pp=True,
+                            generator=generator)
+
     model.apply(initialize_weights)
     print("weights initialized")
 
@@ -226,8 +239,8 @@ if __name__=="__main__":
     # testnn.to(device)
     model.to(device)
 
-    print(f"number of parameters in model: {testnn.count_parameters()}")
-    print(f"devices being used: {testnn.get_tensor_devices()}")
+    print(f"number of parameters in model: {model.count_parameters()}")
+    print(f"devices being used: {model.get_tensor_devices()}")
     # usr_input = input("continue?")
     losses = {"iteration": [],
               "recon": [],
