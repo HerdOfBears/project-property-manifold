@@ -213,7 +213,11 @@ class GomezBombarelli(nn.Module):
         # reconstruction loss, KL divergence, and mean-squared error
         BCE, KL, MSE = None, None, None
         if self.training:
-            BCE = F.cross_entropy(logits, idx, reduction="mean")
+            BCE = F.cross_entropy(
+                logits.view(-1, self.alphabet_size), # (B * T, d_input)
+                idx.view(-1),                        # (B * T)
+                reduction="mean"
+            )
             KL  = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
             if self.use_pp:
                 MSE = F.mse_loss(props, target_props, reduction="mean")

@@ -60,7 +60,7 @@ def training_loop(
     
     # set model to train mode
     model.train()
-    for idx, (bch_x, bch_y) in enumerate(training_data):
+    for idx, (bch_x, bch_y) in enumerate(training_data): # bch_x, bch_y = sequences, properties
 
         # forward
         if model.output_losses:
