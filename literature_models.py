@@ -201,7 +201,8 @@ class GomezBombarelli(nn.Module):
         ########
         # decode
         ########
-        logits = self.decoder(tok, z) # (B, T, d_input) -> (B, T, d_output)
+        # note the slice for T-1, since we want to predict the next token
+        logits = self.decoder(tok[:,:-1,:], z) # (B, T-1, d_input) -> (B, T-1, d_output)
 
         ########
         # property prediction and loss function
@@ -214,8 +215,8 @@ class GomezBombarelli(nn.Module):
         BCE, KL, MSE = None, None, None
         if self.training:
             BCE = F.cross_entropy(
-                logits.view(-1, self.alphabet_size), # (B * T, d_input)
-                idx.view(-1),                        # (B * T)
+                logits.view(-1, self.alphabet_size), # (B * (T-1), d_input)
+                idx[1:].view(-1),                    # (B * (T-1))
                 reduction="mean"
             )
             KL  = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
