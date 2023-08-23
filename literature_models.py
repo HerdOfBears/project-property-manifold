@@ -172,7 +172,7 @@ class GomezBombarelli(nn.Module):
                        generator:torch.Generator)->torch.Tensor:
         
         std = torch.exp(0.5*logvar)
-        eps = torch.randn(std.shape, generator=generator)
+        eps = torch.randn(std.shape, generator=generator).to(std.device)
         return mu + eps*std
 
     def forward(self, idx:torch.Tensor, target_props:torch.Tensor=None):
