@@ -118,7 +118,7 @@ class GomezBombarelli(nn.Module):
                  generator:torch.Generator=None):
         super(GomezBombarelli, self).__init__()
         self.name = f"GomezBombarelli_{round(d_hidden/d_rnn_hidden,3)}_{d_rnn_hidden}"
-        print(f"model name: {self.model_name}")
+        print(f"model name: {self.name}")
         self.alphabet_size = d_input
         self.max_length = 120 
         self.d_pp_output = 1
