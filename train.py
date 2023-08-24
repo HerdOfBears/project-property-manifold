@@ -20,6 +20,7 @@ from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
 from rnn_models import RNNVae
 from literature_models import GomezBombarelli
+from helpers import LossWeightScheduler
 
 def initialize_weights(m):
     if isinstance(m, nn.Linear):
@@ -50,6 +51,7 @@ def training_loop(
                 model,
                 optimizer,
                 epoch,
+                annealer=None,
                 return_losses=False):
     
     if return_losses:
@@ -58,6 +60,11 @@ def training_loop(
                 "kl": [],
                 "prop": []}
     
+    beta = 1.0
+    if annealer is not None:
+        beta = annealer.get_val()
+        annealer.update(epoch)
+
     # set model to train mode
     model.train()
     for idx, (bch_x, bch_y) in enumerate(training_data): # bch_x, bch_y = sequences, properties
@@ -65,7 +72,7 @@ def training_loop(
         # forward
         if model.output_losses:
             recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, bch_y)
-            loss_tot = loss_recon + loss_kl + loss_prop
+            loss_tot = loss_recon + beta*(loss_kl + loss_prop)
         else:
             recon_x, output_pp, means_, logvars_, loss_tot = model(bch_x, bch_y)
         
@@ -247,6 +254,10 @@ if __name__=="__main__":
               "kl": [],
               "prop": []}
     
+    # initialize annealers
+    betaSchedule = LossWeightScheduler(val_min=1e-8, val_max=5e-2, steps=N_EPOCHS)
+
+    # initialize optimizer
     optimizer = optim.Adam(model.parameters(), lr=LR)
 
     print("starting training loop")
@@ -259,6 +270,7 @@ if __name__=="__main__":
                     model, 
                     optimizer,
                     epoch=epoch,
+                    annealer=betaSchedule,
                     return_losses=True)
         
         print(f"epoch time: {round(time.time() - t0, 4)}s")
