@@ -216,7 +216,7 @@ class GomezBombarelli(nn.Module):
         if self.training:
             BCE = F.cross_entropy(
                 logits.view(-1, self.alphabet_size), # (B * (T-1), d_input)
-                idx[:,1:].view(-1),                    # (B * (T-1))
+                idx[:,1:].reshape(-1),                    # (B * (T-1))
                 reduction="mean"
             )
             KL  = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())

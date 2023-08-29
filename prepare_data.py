@@ -128,8 +128,9 @@ class Zinc250k():
         """
 
         # check that train_size, valid_size, test_size add to 1
-        if train_size+valid_size+test_size != 1:
-            raise ValueError(f"train_size, valid_size, test_size must add to 1")
+        tot = train_size+valid_size+test_size
+        if abs(tot - 1) > 1e-6:
+            raise ValueError(f"train_size+valid_size+test_size={tot}, must add to 1")
         
         if generator is None:
             generator = torch.Generator().manual_seed(42)

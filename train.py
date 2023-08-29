@@ -94,6 +94,45 @@ def training_loop(
     if return_losses:
         return losses
 
+def validation_loop(
+                validation_data,
+                model,
+                epoch,
+                annealer=None,
+                return_losses=False):
+    
+    if return_losses:
+        losses = {"iteration": [],
+                "recon": [],
+                "kl": [],
+                "prop": []}
+    
+    beta = 1.0
+    if annealer is not None:
+        beta = annealer.get_val()
+        annealer.update(epoch)
+
+    # set model to train mode
+    model.eval()
+    for idx, (bch_x, bch_y) in enumerate(validation_data): # bch_x, bch_y = sequences, properties
+
+        # forward
+        if model.output_losses:
+            recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, bch_y)
+            loss_tot = loss_recon + beta*(loss_kl + loss_prop)
+        else:
+            recon_x, output_pp, means_, logvars_, loss_tot = model(bch_x, bch_y)
+        
+        if (idx % 50) == 0:
+            if return_losses:
+                losses["iteration"].append(idx + (epoch*len(validation_data)))
+                losses["recon"].append(loss_recon.item())
+                losses["kl"].append(loss_kl.item())
+                losses["prop"].append(loss_prop.item())
+
+    if return_losses:
+        return losses
+
 if __name__=="__main__":
 
     parser = argparse.ArgumentParser()
@@ -175,6 +214,9 @@ if __name__=="__main__":
     #######################
     # train_loader, valid_loader, test_loader = data.create_data_splits()
     train_data, valid_data, test_data, train_targets, valid_targets, test_targets = data.create_data_splits(
+        train_size=0.7,
+        valid_size=0.2,
+        test_size =0.1,
         generator=generator
     )
 
@@ -205,7 +247,10 @@ if __name__=="__main__":
         generator=generator
     )
 
-
+    print(f"length of train_loader: {len(train_loader)}, {len(train_data)=}")
+    print(f"length of valid_loader: {len(valid_loader)}, {len(valid_data)=}")
+    print(f"length of test_loader: {len(test_loader)}")
+    input("continue? [ctrl+c to exit]]")
     #######################
     # Construct model(s)
     #######################
@@ -248,11 +293,21 @@ if __name__=="__main__":
 
     print(f"number of parameters in model: {model.count_parameters()}")
     print(f"devices being used: {model.get_tensor_devices()}")
-    # usr_input = input("continue?")
-    losses = {"iteration": [],
-              "recon": [],
-              "kl": [],
-              "prop": []}
+    usr_input = input("continue?")
+    losses = {
+        "training_losses":{
+            "iteration": [],
+            "recon": [],
+            "kl": [],
+            "prop": []
+        },
+        "validation_losses":{
+            "iteration": [],
+            "recon": [],
+            "kl": [],
+            "prop": []
+        }
+    }
     
     # initialize annealers
     betaSchedule = LossWeightScheduler(val_min=1e-8, val_max=5e-2, steps=N_EPOCHS)
@@ -266,22 +321,34 @@ if __name__=="__main__":
         t0 = time.time()
 
         # perform training loop
-        losses_ = training_loop(train_loader, 
+        losses_ = training_loop(
+                    train_loader, 
                     model, 
                     optimizer,
                     epoch=epoch,
                     annealer=betaSchedule,
-                    return_losses=True)
-        
+                    return_losses=True
+        )
+
+        # perform validation loop
+        validation_losses_ = validation_loop(
+                    valid_loader,
+                    model,
+                    epoch=epoch,
+                    annealer=betaSchedule,
+                    return_losses=True
+        )
+
         print(f"epoch time: {round(time.time() - t0, 4)}s")
         
         # update losses
         for key in losses.keys():
-            losses[key] += losses_[key]
-        
+            losses["training_losses"  ][key] += losses_[key]
+            losses["validation_losses"][key] += validation_losses_[key]
+        break
         # save model checkpoint
         if (epoch % (CHKPT_FREQ-1)) == 0:
             logging.info(f"saving checkpoint at epoch {epoch}")
             torch.save(model.state_dict(), f"{CHKPT_DIR}/{model.name}-epoch{epoch}.pt")
 
-    pkl.dump(losses, open(f"./losses_{model.name}.pkl", "wb"))
+    pkl.dump(losses, open(f"./model_logs/losses_{model.name}.pkl", "wb"))
