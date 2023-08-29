@@ -58,7 +58,8 @@ def training_loop(
         losses = {"iteration": [],
                 "recon": [],
                 "kl": [],
-                "prop": []}
+                "prop": [],
+                "epoch": []}
     
     beta = 1.0
     if annealer is not None:
@@ -105,7 +106,8 @@ def validation_loop(
         losses = {"iteration": [],
                 "recon": [],
                 "kl": [],
-                "prop": []}
+                "prop": [],
+                "epoch": []}
     
     beta = 1.0
     if annealer is not None:
