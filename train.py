@@ -89,6 +89,7 @@ def training_loop(
                 losses["recon"].append(loss_recon.item())
                 losses["kl"].append(loss_kl.item())
                 losses["prop"].append(loss_prop.item())
+                losses["epoch"].append(epoch)
 
     if return_losses:
         return losses
@@ -127,6 +128,7 @@ def validation_loop(
                 losses["recon"].append(loss_recon.item())
                 losses["kl"].append(loss_kl.item())
                 losses["prop"].append(loss_prop.item())
+                losses["epoch"].append(epoch)
 
     if return_losses:
         return losses
@@ -307,13 +309,15 @@ if __name__=="__main__":
             "iteration": [],
             "recon": [],
             "kl": [],
-            "prop": []
+            "prop": [],
+            "epoch": []
         },
         "validation_losses":{
             "iteration": [],
             "recon": [],
             "kl": [],
-            "prop": []
+            "prop": [],
+            "epoch": []
         }
     }
     
@@ -352,7 +356,7 @@ if __name__=="__main__":
         betaSchedule.update(epoch)
 
         # update losses
-        for key in losses["training_losses"].keys():
+        for key in losses_.keys():
             losses["training_losses"  ][key] += losses_[key]
             losses["validation_losses"][key] += validation_losses_[key]
 
