@@ -18,6 +18,10 @@ class Zinc250kDataset(Dataset):
 
         self.data = molecules
         self.targets = torch.tensor(properties)
+        if len(self.data) != len(self.targets):
+            raise ValueError(f"len(molecules)={len(self.data)} != len(properties)={len(self.targets)}")
+        if len(self.targets.shape) == 1:
+            self.targets = self.targets.unsqueeze(-1)
 
     def __len__(self):
         return len(self.data)
