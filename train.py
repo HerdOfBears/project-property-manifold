@@ -110,7 +110,6 @@ def validation_loop(
     beta = 1.0
     if annealer is not None:
         beta = annealer.get_val()
-        annealer.update(epoch)
 
     # set model to train mode
     model.eval()
@@ -349,7 +348,7 @@ if __name__=="__main__":
         print(f"epoch time: {round(time.time() - t0, 4)}s")
         
         # update losses
-        for key in losses.keys():
+        for key in losses["training_losses"].keys():
             losses["training_losses"  ][key] += losses_[key]
             losses["validation_losses"][key] += validation_losses_[key]
         break
