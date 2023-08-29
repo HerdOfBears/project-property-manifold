@@ -147,6 +147,7 @@ if __name__=="__main__":
     parser.add_argument("--n_embd",     type=int,   default=10)
     parser.add_argument("--n_model",    type=int,   default=8)
     parser.add_argument("--n_hidden_prop", type=int, default=10)
+    parser.add_argument("--random_seed", type=int,  default=42)
 
     args = parser.parse_args()
 
@@ -179,10 +180,10 @@ if __name__=="__main__":
         CHKPT_FREQ = args.chkpt_freq 
     else:
         CHKPT_FREQ = N_EPOCHS
+
     print(f"n_epochs: {N_EPOCHS}, batch_size: {BATCH_SIZE}, lr: {LR}")
     print(f"chkpt_dir: {CHKPT_DIR}, chkpt_freq: {CHKPT_FREQ}")
     print(f"n_latent: {N_LATENT}, n_embd: {N_EMBD}, n_hidden_prop: {N_HIDDEN_PROP}")
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(42)
 
@@ -205,7 +206,6 @@ if __name__=="__main__":
     # a lambda function is req'd here because module.apply(fn) 
     # takes a fn with only one argument but we want a defined generator
     generator = torch.Generator().manual_seed(42)
-    # initialize_weights_one_arg = lambda x: initialize_weights(x, generator=generator)
     
 
     #######################
@@ -276,6 +276,9 @@ if __name__=="__main__":
 
     model.apply(initialize_weights)
     print("weights initialized")
+
+    with open(f"./model_logs/model_{model.name}_args.pkl","wb") as f:
+        pkl.dump(vars(args), f)
 
     #######################
     # train
@@ -351,7 +354,7 @@ if __name__=="__main__":
         for key in losses["training_losses"].keys():
             losses["training_losses"  ][key] += losses_[key]
             losses["validation_losses"][key] += validation_losses_[key]
-        break
+
         # save model checkpoint
         if (epoch % (CHKPT_FREQ-1)) == 0:
             logging.info(f"saving checkpoint at epoch {epoch}")
