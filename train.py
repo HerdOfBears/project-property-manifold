@@ -63,7 +63,6 @@ def training_loop(
     beta = 1.0
     if annealer is not None:
         beta = annealer.get_val()
-        annealer.update(epoch)
 
     # set model to train mode
     model.train()
@@ -350,6 +349,8 @@ if __name__=="__main__":
 
         print(f"epoch time: {round(time.time() - t0, 4)}s")
         
+        betaSchedule.update(epoch)
+
         # update losses
         for key in losses["training_losses"].keys():
             losses["training_losses"  ][key] += losses_[key]
