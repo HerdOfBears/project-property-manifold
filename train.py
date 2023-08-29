@@ -250,7 +250,7 @@ if __name__=="__main__":
     print(f"length of train_loader: {len(train_loader)}, {len(train_data)=}")
     print(f"length of valid_loader: {len(valid_loader)}, {len(valid_data)=}")
     print(f"length of test_loader: {len(test_loader)}")
-    input("continue? [ctrl+c to exit]]")
+    # input("continue? [ctrl+c to exit]]")
     #######################
     # Construct model(s)
     #######################
@@ -285,6 +285,13 @@ if __name__=="__main__":
     # send data and model(s) to device
     train_data.data    = train_data.data.to(   device)
     train_data.targets = train_data.targets.to(device)
+
+    valid_data.data    = valid_data.data.to(   device)
+    valid_data.targets = valid_data.targets.to(device)
+    
+    test_data.data     = test_data.data.to(   device)
+    test_data.targets  = test_data.targets.to(device)
+
     tst0, tst1 = next(iter(train_loader))
     print(f"tst0 device = {tst0.device}")
     print(f"tst1 device = {tst1.device}")
@@ -293,7 +300,7 @@ if __name__=="__main__":
 
     print(f"number of parameters in model: {model.count_parameters()}")
     print(f"devices being used: {model.get_tensor_devices()}")
-    usr_input = input("continue?")
+    # usr_input = input("continue?")
     losses = {
         "training_losses":{
             "iteration": [],
