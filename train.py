@@ -328,6 +328,7 @@ if __name__=="__main__":
     optimizer = optim.Adam(model.parameters(), lr=LR)
 
     print("starting training loop")
+    seconds_per_epoch = []
     for epoch in range(N_EPOCHS):
         print(f"epoch {epoch}")
         t0 = time.time()
@@ -352,7 +353,7 @@ if __name__=="__main__":
         )
 
         print(f"epoch time: {round(time.time() - t0, 4)}s")
-        
+        seconds_per_epoch.append(round(time.time() - t0, 4))
         betaSchedule.update(epoch)
 
         # update losses
@@ -364,5 +365,7 @@ if __name__=="__main__":
         if (epoch % (CHKPT_FREQ-1)) == 0:
             logging.info(f"saving checkpoint at epoch {epoch}")
             torch.save(model.state_dict(), f"{CHKPT_DIR}/{model.name}-epoch{epoch}.pt")
-
+    
+    losses["seconds_per_epoch"] = seconds_per_epoch
+    
     pkl.dump(losses, open(f"./model_logs/losses_{model.name}.pkl", "wb"))
