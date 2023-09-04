@@ -126,9 +126,11 @@ class GomezBombarelli(nn.Module):
         self.n_gru_layers = n_gru_layers
         self.use_pp = use_pp # boolean for whether to use a property predictor
         self.output_losses = True # to work with previous code
+        self.padding_idx = 0
         logging.warning("max_length is hardcoded to 120")
         logging.warning(f"hardcoded: {self.d_pp_output=}")
         logging.warning(f"assuming one-hot encoding for inputs")
+        logging.warning(f"loss function ignores: {self.padding_idx=}")
 
         self.encoder = ConvEncoder(d_input, [9, 9, 10], [9, 9, 11], d_hidden)
 
@@ -217,7 +219,8 @@ class GomezBombarelli(nn.Module):
         BCE = F.cross_entropy(
             logits.view(-1, self.alphabet_size), # (B * (T-1), d_input)
             idx[:,1:].reshape(-1),                    # (B * (T-1))
-            reduction="mean"
+            reduction="mean",
+            ignore_index=self.padding_idx
         )
         KL  = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
         if self.use_pp:
