@@ -22,12 +22,16 @@ class Zinc250kDataset(Dataset):
             raise ValueError(f"len(molecules)={len(self.data)} != len(properties)={len(self.targets)}")
         if len(self.targets.shape) == 1:
             self.targets = self.targets.unsqueeze(-1)
+        
+        # make tensor of valid sequence lengths
+        logging.warning("assumes 0 is padding idx")
+        self.valid_lengths = torch.sum(self.data != 0, dim=-1)
 
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, idx):
-        return self.data[idx], self.targets[idx].float()
+        return self.data[idx], self.valid_lengths[idx], self.targets[idx].float()
 
 # class to prepare 
 # - convert to indices
@@ -231,7 +235,10 @@ if __name__ == "__main__":
         generator=generator
     )
 
-
+    bch_x, bch_seq_lens, bch_y = next(iter(train_loader))
+    print(f"{bch_x.shape=}")
+    print((bch_x[30]!=0).sum())
+    print(bch_seq_lens[30])
     # print(f"length of train_data: {len(train_dataloader)}")
     # print(f"length of valid_data: {len(valid_dataloader)}")
     # print(f"length of test_data:  {len( test_dataloader)}")
