@@ -96,6 +96,17 @@ class RNNVae(nn.Module):
         self.ln_gru_dec = nn.LayerNorm(d_model)
         self.fc_out  = nn.Linear(d_model, d_input)
 
+    def count_parameters(self):
+        tot = 0
+        for p in self.parameters():
+            if p.requires_grad:
+                tot += p.numel()
+        return tot
+
+    def get_tensor_devices(self):
+        return [p.device for p in self.parameters()]
+
+
     def encode(self, idx, h0=None):
         """
         Encode a sequence of one-hot vectors into a latent vector
@@ -103,10 +114,10 @@ class RNNVae(nn.Module):
 
         if h0 is None:
             h0 = torch.randn(self.num_layers, 
-                             idx.size(0), 
+                             idx.data.size(0), 
                              self.d_model, 
                              generator=self.generator
-            ).to(idx.device)
+            ).to(idx.data.device)
         _, hlast = self.gru_enc(idx, h0) # (batch_size, T, d_model) -> (batch_size, T, d_model), (n_layers, batch_size, d_model)
         
         # use the last hidden state from the last GRU layer to predict mu and logvar
@@ -142,13 +153,27 @@ class RNNVae(nn.Module):
         eps = torch.randn_like(std)
         return mu + eps*std
 
-    def forward(self, x, prop_targets):
+    def forward(self, x, sequence_lengths=None, prop_targets=None):
         """
         Forward pass of the RNN VAE
+
+        inputs:
+            x: (bsz, T) tensor of padded indices
+            sequence_lengths: (bsz,) tensor of unpadded sequence lengths
+            prop_targets: (bsz,n_properties) tensor of property targets
         """
 
         # embed the sequence of indices 
         tokens = self.embd(x) # (bsz, T) -> (bsz, T, d_model) | note bsz == batch_size
+
+        if sequence_lengths is not None:
+            # pack the sequence of indices
+            tokens = nn.utils.rnn.pack_padded_sequence(
+                tokens, 
+                sequence_lengths, 
+                batch_first=True, 
+                enforce_sorted=False
+            )
 
         mu, logvar = self.encode(tokens) # (bsz, T, d_model) -> (bsz, d_latent)
 
