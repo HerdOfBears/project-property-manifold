@@ -196,7 +196,7 @@ class RNNVae(nn.Module):
             prop_pred = self.fc_pp(z) # (bsz, d_latent) -> (bsz, 1)
             loss_pp = F.mse_loss(
                 prop_pred, 
-                prop_targets.unsqueeze(1),
+                prop_targets,
                 reduction='mean'
             )
         else:
