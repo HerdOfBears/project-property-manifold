@@ -12,7 +12,6 @@ import logging
 import time
 import argparse
 
-from tqdm import tqdm
 from torch.utils.data import DataLoader, Dataset
 
 # custom imports
@@ -67,11 +66,11 @@ def training_loop(
 
     # set model to train mode
     model.train()
-    for idx, (bch_x, bch_y) in enumerate(training_data): # bch_x, bch_y = sequences, properties
+    for idx, (bch_x, bch_seq_lengths, bch_y) in enumerate(training_data): # bch_x, bch_y = sequences, properties
 
         # forward
         if model.output_losses:
-            recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, bch_y)
+            recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, prop_targets=bch_y, sequence_lengths=bch_seq_lengths)
             loss_tot = loss_recon + beta*(loss_kl + loss_prop)
         else:
             recon_x, output_pp, means_, logvars_, loss_tot = model(bch_x, bch_y)
@@ -115,11 +114,14 @@ def validation_loop(
 
     # set model to train mode
     model.eval()
-    for idx, (bch_x, bch_y) in enumerate(validation_data): # bch_x, bch_y = sequences, properties
+    for idx, (bch_x, bch_seq_lengths, bch_y) in enumerate(validation_data): # bch_x, bch_y = sequences, properties
 
         # forward
         if model.output_losses:
-            recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, bch_y)
+            if model.name.split("-")[0]=="rnn":
+                recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, prop_targets=bch_y, sequence_lengths=bch_seq_lengths)
+            else:
+                recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, bch_y)
             loss_tot = loss_recon + beta*(loss_kl + loss_prop)
         else:
             recon_x, output_pp, means_, logvars_, loss_tot = model(bch_x, bch_y)
@@ -206,8 +208,6 @@ if __name__=="__main__":
     #######################
     # Set seed for replicability and construct initialization fn
     #######################
-    # a lambda function is req'd here because module.apply(fn) 
-    # takes a fn with only one argument but we want a defined generator
     generator = torch.Generator().manual_seed(42)
     
 
@@ -256,26 +256,18 @@ if __name__=="__main__":
     #######################
     # Construct model(s)
     #######################
-    print("constructing Test class")
-    testnn = Test(data.alphabet_size,
-                  n_latent=N_LATENT,
-                  n_embd=N_EMBD,
-                  n_hidden_prop=N_HIDDEN_PROP,
-                  output_losses=True)
+    print("constructing class")
     
-    # initialize weights
-    testnn.apply(initialize_weights)
-    
-    # model = RNNVae(data.alphabet_size,
-    #                N_MODEL,
-    #                N_LATENT,
-    #                num_layers=3,
-    #                use_pp=True,
-    #                generator=generator)
-    model = GomezBombarelli(d_input =data.alphabet_size,
-                            d_output=data.alphabet_size,
-                            use_pp=True,
-                            generator=generator)
+    model = RNNVae(data.alphabet_size,
+                   N_MODEL,
+                   N_LATENT,
+                   num_layers=3,
+                   use_pp=True,
+                   generator=generator)
+    # model = GomezBombarelli(d_input =data.alphabet_size,
+    #                         d_output=data.alphabet_size,
+    #                         use_pp=True,
+    #                         generator=generator)
 
     model.apply(initialize_weights)
     print("weights initialized")
@@ -297,9 +289,6 @@ if __name__=="__main__":
     test_data.data     = test_data.data.to(   device)
     test_data.targets  = test_data.targets.to(device)
 
-    tst0, tst1 = next(iter(train_loader))
-    print(f"tst0 device = {tst0.device}")
-    print(f"tst1 device = {tst1.device}")
     # testnn.to(device)
     model.to(device)
 
