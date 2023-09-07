@@ -14,5 +14,5 @@ python train.py \
     --n_latent 32 \
     --n_model 32 \
     --n_embd 32 \
-    --drop_percent_of_labels {$1} \
+    --drop_percent_of_labels $1 \
     --save_dir "./experiments/semi-supervised/drop-{$1}percent/"
