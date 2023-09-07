@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import logging
+import os
 
 # A obj handling scheduling of loss term weights
 # such as the beta term weighting the KL loss
@@ -23,6 +24,23 @@ class LossWeightScheduler():
         self.steps   = steps-1 # ensure we reach val_max during last epoch
         self.val     = val_min
 
+    def state_dict(self):
+        state_dict = {
+            "method": self.method,
+            "val_min": self.val_min,
+            "val_max": self.val_max,
+            "steps": self.steps,
+            "val": self.val
+        }
+        return state_dict
+    
+    def load_state_dict(self, state_dict):
+        self.method  = state_dict["method"]
+        self.val_min = state_dict["val_min"]
+        self.val_max = state_dict["val_max"]
+        self.steps   = state_dict["steps"]
+        self.val     = state_dict["val"]
+
     def linear_schedule_step(self, epoch:int) -> float:
         return self.val_min + (self.val_max - self.val_min) * (epoch / self.steps)
 
@@ -36,6 +54,55 @@ class LossWeightScheduler():
     def get_val(self):
         return self.val
     
+
+def checkpoint_model(model:nn.Module,
+                     optim:torch.optim.Optimizer,
+                     annealer:LossWeightScheduler|None,
+                     epoch:int,
+                     training_loss:float,
+                     validation_loss:float,
+                     path:str,
+                     save_every:int=10,
+                     save_suffix:str=""):
+    if epoch % save_every == 0:
+        save_to = path + f"{model.name}-epoch{epoch}{save_suffix}.pt"
+        logging.info(f"saving checkpoint at epoch {epoch} to {save_to}")
+        torch.save({
+            "epoch": epoch,
+            "model_state_dict": model.state_dict(),
+            "optim_state_dict": optim.state_dict(),
+            "annealer_state_dict": annealer.state_dict() if annealer is not None else None,
+            "training_loss": training_loss,
+            "validation_loss": validation_loss,
+        }, save_to)
+
+def load_checkpoint(path:str,
+                    model:nn.Module,
+                    optim:torch.optim.Optimizer,
+                    annealer:LossWeightScheduler|None)->tuple[int,float,float]:
+    """
+    takes path to .pt file, a model and optimizer obj, and loads the checkpoint
+    optionally takes an annealer object.
+    loads objects in-place
+    returns epoch, training_loss, validation_loss
+    """
+
+    # check file exists
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Checkpoint file {path} not found")
+
+    checkpoint = torch.load(path)
+    
+    model.load_state_dict(checkpoint["model_state_dict"])
+    optim.load_state_dict(checkpoint["optim_state_dict"])
+    if annealer is not None:
+        annealer.load_state_dict(checkpoint["annealer_state_dict"])
+    
+    epoch = checkpoint["epoch"]
+    training_loss   = checkpoint[   "training_loss"]
+    validation_loss = checkpoint[ "validation_loss"]
+    return epoch, training_loss, validation_loss
+
 
 if __name__=="__main__":
 
