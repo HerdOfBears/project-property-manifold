@@ -156,7 +156,7 @@ if __name__=="__main__":
     parser.add_argument("--n_hidden_prop", type=int, default=10)
     parser.add_argument("--chkpt_freq", type=int,   default=-1)
     parser.add_argument("--random_seed", type=int,  default=42)
-    parser.add_argument("--drop_percent_of_labels", type=float, default=0.0)
+    parser.add_argument("--drop_percent_of_labels", type=int, default=0)
     parser.add_argument("--save_dir",  type=str,   default="./runs/")
     parser.add_argument("--save_suffix", type=str, default="")
 
@@ -232,9 +232,9 @@ if __name__=="__main__":
 
     # always shuffle indices so that random generator is at same state each run
     shuffled_training_indices = torch.randperm(len(train_targets), generator=generator)
-    if DROP_PERCENT_OF_LABELS > 0.0:
-        print(f"dropping {DROP_PERCENT_OF_LABELS*100}% of labels")
-        n_to_drop = int(DROP_PERCENT_OF_LABELS*len(train_targets))
+    if DROP_PERCENT_OF_LABELS > 0:
+        print(f"dropping {DROP_PERCENT_OF_LABELS}% of labels")
+        n_to_drop = int(DROP_PERCENT_OF_LABELS/100*len(train_targets))
         shuffled_training_indices = shuffled_training_indices[:n_to_drop]
         train_targets[shuffled_training_indices] = np.nan
 
