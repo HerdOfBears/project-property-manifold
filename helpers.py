@@ -104,6 +104,30 @@ def load_checkpoint(path:str,
     return epoch, training_loss, validation_loss
 
 
+def make_save_dir(save_dir:str, model_name:str):
+    """
+    makes directories for saving to. It will look like this:
+    save_dir/
+    --model_name/
+    ----model_args.pkl
+    ----losses.pkl
+    ----checkpoints/
+    inputs:
+        save_dir: str, path to directory where dir tree will be created
+        model_name: str, name of model
+    
+    outputs:
+        model_dir: str, path to directory where model args + losses will be saved
+        chkpt_dir: str, path to directory where checkpoints will be saved
+    """
+    model_dir = os.path.join(save_dir, model_name) + "/"
+    os.mkdir(model_dir)
+
+    chkpt_dir = os.path.join(model_dir, "checkpoints") + "/"
+    os.mkdir(chkpt_dir)
+
+    return model_dir, chkpt_dir
+
 if __name__=="__main__":
 
     EPOCHS = 11
