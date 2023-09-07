@@ -224,7 +224,11 @@ class GomezBombarelli(nn.Module):
         )
         KL  = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
         if self.use_pp:
-            MSE = F.mse_loss(props, target_props, reduction="mean")
+            MSE = F.mse_loss(
+                props[       ~target_props.isnan()], 
+                target_props[~target_props.isnan()], 
+                reduction="mean"
+            )
         
         return logits, mu, logvar, props, BCE, KL, MSE
     
