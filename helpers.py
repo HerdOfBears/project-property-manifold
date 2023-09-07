@@ -121,10 +121,12 @@ def make_save_dir(save_dir:str, model_name:str):
         chkpt_dir: str, path to directory where checkpoints will be saved
     """
     model_dir = os.path.join(save_dir, model_name) + "/"
-    os.mkdir(model_dir)
+    if not os.path.exists(model_dir):
+        os.mkdir(model_dir)
 
     chkpt_dir = os.path.join(model_dir, "checkpoints") + "/"
-    os.mkdir(chkpt_dir)
+    if not os.path.exists(chkpt_dir):
+        os.mkdir(chkpt_dir)
 
     return model_dir, chkpt_dir
 
