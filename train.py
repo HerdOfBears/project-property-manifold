@@ -19,7 +19,7 @@ from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
 from rnn_models import RNNVae
 from literature_models import GomezBombarelli
-from helpers import LossWeightScheduler, checkpoint_model
+from helpers import LossWeightScheduler, checkpoint_model, make_save_dir
 
 def initialize_weights(m):
     if isinstance(m, nn.Linear):
@@ -150,14 +150,14 @@ if __name__=="__main__":
     parser.add_argument("--logging",    type=str,   default="WARNING", 
                         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
     )
-    parser.add_argument("--chkpt_dir",  type=str,   default="./checkpoints")
-    parser.add_argument("--chkpt_freq", type=int,   default=-1)
     parser.add_argument("--n_latent",   type=int,   default=4)
     parser.add_argument("--n_embd",     type=int,   default=10)
     parser.add_argument("--n_model",    type=int,   default=8)
     parser.add_argument("--n_hidden_prop", type=int, default=10)
+    parser.add_argument("--chkpt_freq", type=int,   default=-1)
     parser.add_argument("--random_seed", type=int,  default=42)
     parser.add_argument("--drop_percent_of_labels", type=float, default=0.0)
+    parser.add_argument("--save_dir",  type=str,   default="./runs/")
     parser.add_argument("--save_suffix", type=str, default="")
 
     args = parser.parse_args()
@@ -181,7 +181,8 @@ if __name__=="__main__":
     BATCH_SIZE = args.batch_size 
     LR = args.lr # learning rate
     DROP_PERCENT_OF_LABELS = args.drop_percent_of_labels # percentage of labels to NaN out for experiment
-    CHKPT_DIR = args.chkpt_dir
+    # CHKPT_DIR = args.chkpt_dir #deprecated
+    SAVE_DIR = args.save_dir
     SAVE_SUFFIX = args.save_suffix
 
     N_EMBD = args.n_embd
@@ -195,7 +196,7 @@ if __name__=="__main__":
         CHKPT_FREQ = N_EPOCHS
 
     print(f"n_epochs: {N_EPOCHS}, batch_size: {BATCH_SIZE}, lr: {LR}")
-    print(f"chkpt_dir: {CHKPT_DIR}, chkpt_freq: {CHKPT_FREQ}")
+    print(f"save_dir: {SAVE_DIR}, chkpt_freq: {CHKPT_FREQ}")
     print(f"n_latent: {N_LATENT}, n_embd: {N_EMBD}, n_hidden_prop: {N_HIDDEN_PROP}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(42)
@@ -283,10 +284,12 @@ if __name__=="__main__":
     #                         use_pp=True,
     #                         generator=generator)
 
+    MODEL_DIR, CHKPT_DIR = make_save_dir(SAVE_DIR, model.name+SAVE_SUFFIX)
+
     model.apply(initialize_weights)
     print("weights initialized")
 
-    with open(f"./model_logs/model_{model.name}_args{SAVE_SUFFIX}.pkl","wb") as f:
+    with open(MODEL_DIR + f"model_{model.name}_args{SAVE_SUFFIX}.pkl","wb") as f:
         pkl.dump(vars(args), f)
 
     #######################
@@ -379,11 +382,11 @@ if __name__=="__main__":
             epoch, 
             epoch_training_loss,
             epoch_validation_loss, 
-            path=CHKPT_DIR+"/",
+            path=CHKPT_DIR,
             save_every=CHKPT_FREQ-1,
             save_suffix=SAVE_SUFFIX
         )
     
     losses["seconds_per_epoch"] = seconds_per_epoch
     
-    pkl.dump(losses, open(f"./model_logs/losses_{model.name}{SAVE_SUFFIX}.pkl", "wb"))
+    pkl.dump(losses, open(MODEL_DIR+f"losses_{model.name}{SAVE_SUFFIX}.pkl", "wb"))
