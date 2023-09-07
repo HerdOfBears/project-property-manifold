@@ -122,7 +122,7 @@ def make_save_dir(save_dir:str, model_name:str):
     """
     model_dir = os.path.join(save_dir, model_name) + "/"
     if not os.path.exists(model_dir):
-        os.mkdir(model_dir)
+        os.makedirs(model_dir) # will create intermediate dirs if needed
 
     chkpt_dir = os.path.join(model_dir, "checkpoints") + "/"
     if not os.path.exists(chkpt_dir):
