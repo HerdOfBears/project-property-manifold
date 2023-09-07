@@ -162,35 +162,6 @@ class Zinc250k():
                 self.data[property_name].values[valid_idxs],
                 self.data[property_name].values[ test_idxs]
         )
-        # train_data = Zinc250kDataset(self.encoded_smiles[train_idxs], self.data[property_name].values[train_idxs])
-        # valid_data = Zinc250kDataset(self.encoded_smiles[valid_idxs], self.data[property_name].values[valid_idxs])
-        # test_data  = Zinc250kDataset(self.encoded_smiles[ test_idxs], self.data[property_name].values[ test_idxs])
-
-        # train_loader = DataLoader(
-        #     train_data,
-        #     batch_size=32,
-        #     shuffle=True,
-        #     generator=generator
-        # )
-        # valid_loader = DataLoader(
-        #     valid_data,
-        #     batch_size=32,
-        #     shuffle=True,
-        #     generator=generator
-        # )
-        # test_loader = DataLoader(
-        #     test_data,
-        #     batch_size=32,
-        #     shuffle=True,
-        #     generator=generator
-        # )
-
-        # logging.warning("datasets are hosted on CPU, not GPU")
-
-        # if verbose:
-        #     return train_loader, valid_loader, test_loader, train_data, valid_data, test_data
-        # else:
-        #     return train_loader, valid_loader, test_loader
 
     
 if __name__ == "__main__":
