@@ -19,7 +19,7 @@ from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
 from rnn_models import RNNVae
 from literature_models import GomezBombarelli
-from helpers import LossWeightScheduler
+from helpers import LossWeightScheduler, checkpoint_model
 
 def initialize_weights(m):
     if isinstance(m, nn.Linear):
@@ -70,7 +70,11 @@ def training_loop(
 
         # forward
         if model.output_losses:
-            recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, prop_targets=bch_y, sequence_lengths=bch_seq_lengths)
+            if model.name.split("-")[0]=="rnn":
+                recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, prop_targets=bch_y, sequence_lengths=bch_seq_lengths)
+            else:
+                recon_x, output_pp, means_, logvars_, loss_recon, loss_kl, loss_prop = model(bch_x, bch_y)
+
             loss_tot = loss_recon + beta*(loss_kl + loss_prop)
         else:
             recon_x, output_pp, means_, logvars_, loss_tot = model(bch_x, bch_y)
@@ -153,6 +157,8 @@ if __name__=="__main__":
     parser.add_argument("--n_model",    type=int,   default=8)
     parser.add_argument("--n_hidden_prop", type=int, default=10)
     parser.add_argument("--random_seed", type=int,  default=42)
+    parser.add_argument("--drop_percent_of_labels", type=float, default=0.0)
+    parser.add_argument("--save_suffix", type=str, default="")
 
     args = parser.parse_args()
 
@@ -174,7 +180,9 @@ if __name__=="__main__":
     N_EPOCHS = args.epochs # n times through training loader
     BATCH_SIZE = args.batch_size 
     LR = args.lr # learning rate
+    DROP_PERCENT_OF_LABELS = args.drop_percent_of_labels # percentage of labels to NaN out for experiment
     CHKPT_DIR = args.chkpt_dir
+    SAVE_SUFFIX = args.save_suffix
 
     N_EMBD = args.n_embd
     N_LATENT = args.n_latent
@@ -192,7 +200,6 @@ if __name__=="__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(42)
 
-    print(f"using device: {device}")
     print("running training script...")
     print("constructing data class")
     data = Zinc250k("./data", 
@@ -221,6 +228,14 @@ if __name__=="__main__":
         test_size =0.1,
         generator=generator
     )
+
+    # always shuffle indices so that random generator is at same state each run
+    shuffled_training_indices = torch.randperm(len(train_targets), generator=generator)
+    if DROP_PERCENT_OF_LABELS > 0.0:
+        print(f"dropping {DROP_PERCENT_OF_LABELS*100}% of labels")
+        n_to_drop = int(DROP_PERCENT_OF_LABELS*len(train_targets))
+        shuffled_training_indices = shuffled_training_indices[:n_to_drop]
+        train_targets[shuffled_training_indices] = np.nan
 
     print(f"length of train_data: {len(train_data)}")
     print(F"length of train_targets: {len(train_targets)}")
@@ -252,7 +267,6 @@ if __name__=="__main__":
     print(f"length of train_loader: {len(train_loader)}, {len(train_data)=}")
     print(f"length of valid_loader: {len(valid_loader)}, {len(valid_data)=}")
     print(f"length of test_loader: {len(test_loader)}")
-    # input("continue? [ctrl+c to exit]]")
     #######################
     # Construct model(s)
     #######################
@@ -272,7 +286,7 @@ if __name__=="__main__":
     model.apply(initialize_weights)
     print("weights initialized")
 
-    with open(f"./model_logs/model_{model.name}_args.pkl","wb") as f:
+    with open(f"./model_logs/model_{model.name}_args{SAVE_SUFFIX}.pkl","wb") as f:
         pkl.dump(vars(args), f)
 
     #######################
@@ -289,12 +303,10 @@ if __name__=="__main__":
     test_data.data     = test_data.data.to(   device)
     test_data.targets  = test_data.targets.to(device)
 
-    # testnn.to(device)
     model.to(device)
 
     print(f"number of parameters in model: {model.count_parameters()}")
-    print(f"devices being used: {model.get_tensor_devices()}")
-    # usr_input = input("continue?")
+    print(f"device being used: {device}")
     losses = {
         "training_losses":{
             "iteration": [],
@@ -309,7 +321,8 @@ if __name__=="__main__":
             "kl": [],
             "prop": [],
             "epoch": []
-        }
+        },
+        "n_parameters_in_model": model.count_parameters()
     }
     
     # initialize annealers
@@ -320,8 +333,9 @@ if __name__=="__main__":
 
     print("starting training loop")
     seconds_per_epoch = []
+    epoch_training_loss   = 0
+    epoch_validation_loss = 0
     for epoch in range(N_EPOCHS):
-        print(f"epoch {epoch}")
         t0 = time.time()
 
         # perform training loop
@@ -342,9 +356,12 @@ if __name__=="__main__":
                     annealer=betaSchedule,
                     return_losses=True
         )
-
-        print(f"epoch time: {round(time.time() - t0, 4)}s")
+        
+        # collect seconds per epoch
+        print(f"epoch {epoch} time taken: {round(time.time() - t0, 4)}s")
         seconds_per_epoch.append(round(time.time() - t0, 4))
+        
+        # update annealer(s)
         betaSchedule.update(epoch)
 
         # update losses
@@ -353,10 +370,20 @@ if __name__=="__main__":
             losses["validation_losses"][key] += validation_losses_[key]
 
         # save model checkpoint
-        if (epoch % (CHKPT_FREQ-1)) == 0:
-            logging.info(f"saving checkpoint at epoch {epoch}")
-            torch.save(model.state_dict(), f"{CHKPT_DIR}/{model.name}-epoch{epoch}.pt")
+        epoch_training_loss = np.mean(losses_["recon"]) + betaSchedule.get_val()*(np.mean(losses_["kl"]) + np.mean(losses_["prop"]))
+        epoch_validation_loss = np.mean(validation_losses_["recon"]) + betaSchedule.get_val()*(np.mean(validation_losses_["kl"]) + np.mean(validation_losses_["prop"]))
+        checkpoint_model(
+            model, 
+            optimizer, 
+            betaSchedule, 
+            epoch, 
+            epoch_training_loss,
+            epoch_validation_loss, 
+            path=CHKPT_DIR+"/",
+            save_every=CHKPT_FREQ-1,
+            save_suffix=SAVE_SUFFIX
+        )
     
     losses["seconds_per_epoch"] = seconds_per_epoch
     
-    pkl.dump(losses, open(f"./model_logs/losses_{model.name}.pkl", "wb"))
+    pkl.dump(losses, open(f"./model_logs/losses_{model.name}{SAVE_SUFFIX}.pkl", "wb"))
