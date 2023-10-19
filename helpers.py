@@ -65,7 +65,8 @@ def checkpoint_model(model:nn.Module,
                      save_every:int=10,
                      save_suffix:str=""):
     if epoch % save_every == 0:
-        save_to = path + f"{model.name}-epoch{epoch}{save_suffix}.pt"
+        # save_to = path + f"{model.name}-epoch{epoch}{save_suffix}.pt"
+        save_to = path + f"epoch-{epoch}.pt"
         logging.info(f"saving checkpoint at epoch {epoch} to {save_to}")
         torch.save({
             "epoch": epoch,
@@ -78,23 +79,37 @@ def checkpoint_model(model:nn.Module,
 
 def load_checkpoint(path:str,
                     model:nn.Module,
-                    optim:torch.optim.Optimizer,
-                    annealer:LossWeightScheduler|None)->tuple[int,float,float]:
+                    optim:torch.optim.Optimizer|None=None,
+                    annealer:LossWeightScheduler|None=None,
+                    device:str="cpu")->tuple[int,float,float]:
     """
-    takes path to .pt file, a model and optimizer obj, and loads the checkpoint
-    optionally takes an annealer object.
+    loads a checkpoint file and returns the epoch, training_loss, validation_loss
     loads objects in-place
-    returns epoch, training_loss, validation_loss
+
+    inputs:
+        path : path to .pt file, 
+        model: the pytorch module for the model architecture
+        optimizer: object of torch.optim.Optimizer or None (default)
+        annealer:  object of LossWeightScheduler   or None (default)
+        device  :  str, either "cpu" or "gpu"
+    outputs
+        epoch, 
+        training_loss, 
+        validation_loss
     """
 
     # check file exists
     if not os.path.exists(path):
         raise FileNotFoundError(f"Checkpoint file {path} not found")
 
-    checkpoint = torch.load(path)
-    
+    if device=="cpu":
+        checkpoint = torch.load(path, map_location=torch.device('cpu'))
+    else:
+        checkpoint = torch.load(path)
+
     model.load_state_dict(checkpoint["model_state_dict"])
-    optim.load_state_dict(checkpoint["optim_state_dict"])
+    if optim is not None:
+        optim.load_state_dict(checkpoint["optim_state_dict"])
     if annealer is not None:
         annealer.load_state_dict(checkpoint["annealer_state_dict"])
     
@@ -110,7 +125,7 @@ def make_save_dir(save_dir:str, model_name:str):
     save_dir/
     --model_name/
     ----model_args.pkl
-    ----losses.pkl
+    ----losses.pkl 
     ----checkpoints/
     inputs:
         save_dir: str, path to directory where dir tree will be created
@@ -129,6 +144,31 @@ def make_save_dir(save_dir:str, model_name:str):
         os.mkdir(chkpt_dir)
 
     return model_dir, chkpt_dir
+
+def initialize_weights(m):
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight)
+        m.bias.data.zero_()
+    elif isinstance(m, nn.Embedding):
+        torch.nn.init.xavier_uniform_(m.weight)
+    elif isinstance(m, nn.RNN):
+        torch.nn.init.xavier_uniform_(m.weight_ih_l0)
+        torch.nn.init.xavier_uniform_(m.weight_hh_l0)
+        m.bias_ih_l0.data.zero_()
+        m.bias_hh_l0.data.zero_()
+    elif type(m) == nn.GRU:
+        for param in m._flat_weights_names:
+            if "weight" in param:
+                nn.init.xavier_uniform_(m._parameters[param])
+            elif "bias" in param:
+                m._parameters[param].data.zero_()
+    elif type(m) == nn.Conv1d:
+        for param in m._parameters:
+            if "weight" in param:
+                nn.init.xavier_uniform_(m._parameters[param])
+            elif "bias" in param:
+                m._parameters[param].data.zero_()
+
 
 if __name__=="__main__":
 

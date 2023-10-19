@@ -7,43 +7,23 @@ import numpy as np
 import pickle as pkl
 
 import os
+import yaml
 import sys
 import logging
 import time
 import argparse
+import ast
 
+from datetime import datetime
 from torch.utils.data import DataLoader, Dataset
 
 # custom imports
 from prepare_data import Zinc250k, Zinc250kDataset
 from models import Test
+from losses import OracleVAELoss
 from rnn_models import RNNVae
 from literature_models import GomezBombarelli
-from helpers import LossWeightScheduler, checkpoint_model, make_save_dir
-
-def initialize_weights(m):
-    if isinstance(m, nn.Linear):
-        torch.nn.init.xavier_uniform_(m.weight)
-        m.bias.data.zero_()
-    elif isinstance(m, nn.Embedding):
-        torch.nn.init.xavier_uniform_(m.weight)
-    elif isinstance(m, nn.RNN):
-        torch.nn.init.xavier_uniform_(m.weight_ih_l0)
-        torch.nn.init.xavier_uniform_(m.weight_hh_l0)
-        m.bias_ih_l0.data.zero_()
-        m.bias_hh_l0.data.zero_()
-    elif type(m) == nn.GRU:
-        for param in m._flat_weights_names:
-            if "weight" in param:
-                nn.init.xavier_uniform_(m._parameters[param])
-            elif "bias" in param:
-                m._parameters[param].data.zero_()
-    elif type(m) == nn.Conv1d:
-        for param in m._parameters:
-            if "weight" in param:
-                nn.init.xavier_uniform_(m._parameters[param])
-            elif "bias" in param:
-                m._parameters[param].data.zero_()
+from helpers import LossWeightScheduler, checkpoint_model, make_save_dir, initialize_weights
 
 def training_loop(
                 training_data,
@@ -85,9 +65,6 @@ def training_loop(
         optimizer.step()
 
         if (idx % 50) == 0:
-            # print(f"iter = {idx}",
-            #     f"losses {round(loss_recon.item(), 4)}, {round(loss_kl.item(), 4)}, {round(loss_prop.item(), 4)}" 
-            # )
             if return_losses:
                 losses["iteration"].append(idx + (epoch*len(training_data)))
                 losses["recon"].append(loss_recon.item())
@@ -144,23 +121,36 @@ def validation_loop(
 if __name__=="__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs",     type=int,   default=2)
-    parser.add_argument("--batch_size", type=int,   default=32)
-    parser.add_argument("--lr",         type=float, default=1e-3)
-    parser.add_argument("--logging",    type=str,   default="WARNING", 
-                        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    )
-    parser.add_argument("--n_latent",   type=int,   default=4)
-    parser.add_argument("--n_embd",     type=int,   default=10)
-    parser.add_argument("--n_model",    type=int,   default=8)
-    parser.add_argument("--n_hidden_prop", type=int, default=10)
-    parser.add_argument("--chkpt_freq", type=int,   default=-1)
-    parser.add_argument("--random_seed", type=int,  default=42)
-    parser.add_argument("--drop_percent_of_labels", type=int, default=0)
-    parser.add_argument("--save_dir",  type=str,   default="./runs/")
-    parser.add_argument("--save_suffix", type=str, default="")
+    with open("./configurations.yml", "rb") as f:
+        config = yaml.safe_load(f)
+    config_keys = list(config.keys())
+    for k_ in config_keys:
+        parser.add_argument(f"--{k_}")
 
     args = parser.parse_args()
+    args_dict = vars(args)
+
+    # parse data types
+    for key_, value_ in args_dict.items():
+        if value_ is not None:
+            #continue # FLAG! don't want to use below atm
+            if key_.split("_")[0] in ["d","num"]:
+                print(f"overwriting {key_=}'s value {config[key_]} with {value_}")
+                config[key_] = int(value_)
+            elif key_ in ["lr", "dropout"]:
+                print(f"overwriting {key_=}'s value {config[key_]} with {value_}")
+                config[key_] = float(value_)
+            elif key_ in ["use_pp"]:
+                print(f"overwriting {key_=}'s value {config[key_]} with {value_}")
+                # print(value_)
+                if value_=="True":
+                    config[key_] = True
+                elif value_=="False":
+                    config[key_] = False
+                else:
+                    raise ValueError(f"invalid value for {key_}: {value_}")
+
+    config["run_day_time"] = str(datetime.now())
 
     LOGGING_LEVEL = args.logging
     if LOGGING_LEVEL == "DEBUG":
@@ -177,18 +167,22 @@ if __name__=="__main__":
     #######################
     # HYPERPARAMETERS
     #######################
-    N_EPOCHS = args.epochs # n times through training loader
-    BATCH_SIZE = args.batch_size 
-    LR = args.lr # learning rate
     DROP_PERCENT_OF_LABELS = args.drop_percent_of_labels # percentage of labels to NaN out for experiment
-    # CHKPT_DIR = args.chkpt_dir #deprecated
-    SAVE_DIR = args.save_dir
-    SAVE_SUFFIX = args.save_suffix
+    
+    N_EPOCHS   = config["num_epochs"] # n times through training loader
+    BATCH_SIZE = config["batch_size"] 
+    LR         = config["lr"] # learning rate
+    
+    SAVE_DIR    = config["save_dir"]
+    SAVE_SUFFIX = config["save_suffix"]
 
-    N_EMBD = args.n_embd
-    N_LATENT = args.n_latent
-    N_MODEL  = args.n_model
-    N_HIDDEN_PROP = args.n_hidden_prop
+    # N_EMBD   = config["d_embd"]
+    # N_LATENT = config["d_latent"]
+    # N_MODEL  = config["d_model"]
+    # N_HIDDEN_PROP = config["d_hidden_prop"]
+    REDUCTION = "mean"
+    PP_MODE   = "regression"
+    USE_PP = True if config["use_pp"] in ["True",True] else False
 
     if args.chkpt_freq > 0:
         CHKPT_FREQ = args.chkpt_freq 
@@ -197,7 +191,6 @@ if __name__=="__main__":
 
     print(f"n_epochs: {N_EPOCHS}, batch_size: {BATCH_SIZE}, lr: {LR}")
     print(f"save_dir: {SAVE_DIR}, chkpt_freq: {CHKPT_FREQ}")
-    print(f"n_latent: {N_LATENT}, n_embd: {N_EMBD}, n_hidden_prop: {N_HIDDEN_PROP}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(42)
 
@@ -217,7 +210,7 @@ if __name__=="__main__":
     # Set seed for replicability and construct initialization fn
     #######################
     generator = torch.Generator().manual_seed(42)
-    
+    torch.manual_seed(42)
 
     #######################
     # create data loaders
@@ -273,16 +266,28 @@ if __name__=="__main__":
     #######################
     print("constructing class")
     
-    model = RNNVae(data.alphabet_size,
-                   N_MODEL,
-                   N_LATENT,
-                   num_layers=3,
-                   use_pp=True,
-                   generator=generator)
+    # model = RNNVae(data.alphabet_size,
+    #                N_MODEL,
+    #                N_LATENT,
+    #                num_layers=3,
+    #                use_pp=True,
+    #                generator=generator)
     # model = GomezBombarelli(d_input =data.alphabet_size,
     #                         d_output=data.alphabet_size,
     #                         use_pp=True,
     #                         generator=generator)
+
+    loss_fn = OracleVAELoss(use_pp=USE_PP, reduction=REDUCTION, pp_mode=PP_MODE)
+    if config["model_name"].split("-")[0]=="rnn":
+        model = RNNVae(config,
+                    loss_fn=loss_fn,
+                    generator=generator)
+    elif config["model_name"].split("-")[0]=="cnn":
+        model = GomezBombarelli(config,
+                                loss_fn=loss_fn,
+                                generator=generator)
+    else: 
+        raise NotImplementedError(f"model name {config['model_name']} not implemented")
 
     MODEL_DIR, CHKPT_DIR = make_save_dir(SAVE_DIR, model.name+SAVE_SUFFIX)
 
@@ -336,6 +341,7 @@ if __name__=="__main__":
 
     print("starting training loop")
     seconds_per_epoch = []
+    beta_vals = []
     epoch_training_loss   = 0
     epoch_validation_loss = 0
     for epoch in range(N_EPOCHS):
@@ -363,7 +369,8 @@ if __name__=="__main__":
         # collect seconds per epoch
         print(f"epoch {epoch} time taken: {round(time.time() - t0, 4)}s")
         seconds_per_epoch.append(round(time.time() - t0, 4))
-        
+        beta_vals.append(betaSchedule.get_val())
+
         # update annealer(s)
         betaSchedule.update(epoch)
 
@@ -388,5 +395,6 @@ if __name__=="__main__":
         )
     
     losses["seconds_per_epoch"] = seconds_per_epoch
-    
+    losses["beta_vals"] = beta_vals
+
     pkl.dump(losses, open(MODEL_DIR+f"losses_{model.name}{SAVE_SUFFIX}.pkl", "wb"))

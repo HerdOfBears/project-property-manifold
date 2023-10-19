@@ -4,13 +4,16 @@ import torch.nn.functional as F
 
 import logging
 
+from losses import OracleVAELoss
+
 class ConvEncoder(nn.Module):
     def __init__(self,
                  d_input:int,
                  conv_outs:list[int],
                  conv_kernels:list[int],
                  d_model:int,
-                 padding:str='same'):
+                 padding:str='same',
+                 dropout:float=0.0):
         """ 
         Encoder using CNNs
         Inputs:
@@ -31,7 +34,7 @@ class ConvEncoder(nn.Module):
                 self.conv_layers.append(
                     nn.Conv1d(conv_outs[i-1], out, kernel, padding=padding)
                 )
-            self.conv_layers.append(nn.ReLU())
+            self.conv_layers.append(nn.LeakyReLU()) # FLAG! what pooling should be use? 
 
         self.ff = nn.Linear(conv_outs[-1], d_model)
 
@@ -108,47 +111,57 @@ class GomezBombarelli(nn.Module):
     - the context vector is used to initialize the hidden state of the decoder
     """
     def __init__(self, 
-                 d_input:int=35, 
-                 d_hidden:int=196,
-                 d_rnn_hidden:int=488,
-                 d_pp_hidden:int=67, # "To simply shape the latent space, a smaller perceptron of 3 layers of 67 neurons was used for the property predictor" 
-                 d_output:int=35,
-                 n_gru_layers:int=3,
-                 use_pp:bool=True,
+                 params:dict,
+                 loss_fn:nn.Module,
                  generator:torch.Generator=None):
         super(GomezBombarelli, self).__init__()
-        self.name = f"GomezBombarelli_{round(d_hidden/d_rnn_hidden,3)}_{d_rnn_hidden}"
-        print(f"model name: {self.name}")
-        self.alphabet_size = d_input
-        self.max_length = 120 
-        self.d_pp_output = 1
-        self.d_latent = d_hidden//2 # half of the hidden dimension is the mean, half is the variance
-        self.n_gru_layers = n_gru_layers
-        self.use_pp = use_pp # boolean for whether to use a property predictor
-        self.output_losses = True # to work with previous code
+        
+        self.alphabet_size  = params["d_input"]
+        self.d_input        = params["d_input"] 
+        self.d_latent       = params["d_latent"] # half of the hidden dimension is the mean, half is the variance
+        self.d_hidden       = self.d_latent*2
+        self.d_rnn_hidden   = params["d_rnn_hidden"] 
+        self.n_gru_layers   = params["num_gru_layers"]
+        self.d_output       = params["d_output"]
+
+        self.dropout        = params["dropout"]
+        self.max_length     = params["max_length"] 
+        self.padding_idx    = params["padding_idx"]
         self.padding_idx = 0
-        logging.warning("max_length is hardcoded to 120")
+        self.masking_probability = params["masking_probability"] # probability of masking a token before giving to the decoder.
+        self.output_losses  = True # to work with previous code
+
+        self.use_pp         = params["use_pp"] # boolean for whether to use a property predictor
+        self.d_pp_input     = self.d_latent
+        self.d_pp_hidden    = params["d_pp_hidden"]
+        self.d_pp_output    = params["d_pp_output"]
+        
+        self.name = f"GomezBombarelli_{round(self.d_hidden/self.d_rnn_hidden,3)}_{self.d_rnn_hidden}"
+        print(f"model name: {self.name}")
+        
+        logging.warning("max_length is hardcoded to 150")
         logging.warning(f"hardcoded: {self.d_pp_output=}")
         logging.warning(f"assuming one-hot encoding for inputs")
         logging.warning(f"loss function ignores: {self.padding_idx=}")
 
-        self.encoder = ConvEncoder(d_input, [9, 9, 10], [9, 9, 11], d_hidden)
+        self.loss_fn = loss_fn
 
-        self.ff_context = nn.Linear(self.d_latent, d_rnn_hidden) # latent variable -> context vector
+        self.encoder = ConvEncoder(self.d_input, [9, 9, 10], [9, 9, 11], self.d_hidden)
 
-        self.decoder = RNNBlock(d_input, 
-                                d_rnn_hidden, 
-                                d_output, 
-                                n_gru_layers,
+        self.ff_context = nn.Linear(self.d_latent, self.d_rnn_hidden) # latent variable -> context vector
+
+        self.decoder = RNNBlock(self.d_input, 
+                                self.d_rnn_hidden, 
+                                self.d_output, 
+                                self.n_gru_layers,
+                                dropout=self.dropout,
                                 batch_first=True)
 
-        if use_pp:
+        if self.use_pp:
             self.property_predictor = nn.Sequential(
-                nn.Linear(self.d_latent, d_pp_hidden),
+                nn.Linear(self.d_latent, self.d_pp_hidden),
                 nn.ReLU(),
-                nn.Linear(d_pp_hidden, d_pp_hidden),
-                nn.ReLU(),
-                nn.Linear(d_pp_hidden, self.d_pp_output)
+                nn.Linear(self.d_pp_hidden, self.d_pp_output)
             )
 
         if generator is None:
@@ -157,7 +170,7 @@ class GomezBombarelli(nn.Module):
             self.generator.manual_seed(0)
         else:
             self.generator = generator
-    
+
     def count_parameters(self):
         tot = 0
         for p in self.parameters():
@@ -177,9 +190,9 @@ class GomezBombarelli(nn.Module):
         eps = torch.randn(std.shape, generator=generator).to(std.device)
         return mu + eps*std
 
-    def forward(self, idx:torch.Tensor, target_props:torch.Tensor=None):
-        
+    def encode(self, idx:torch.Tensor):
         # embed indices | used as input to both encoder and decoder
+        B, T = idx.shape
         tok = F.one_hot(idx, self.alphabet_size).float() # (B, T) -> (B, T, d_input)
 
         ########
@@ -190,6 +203,23 @@ class GomezBombarelli(nn.Module):
         mu, logvar = mu_logvar[:,:self.d_latent], mu_logvar[:,self.d_latent:] # (B, d_hidden) -> (B, d_latent), (B, d_latent)
         tok = tok.permute(0,2,1)        # (B, d_input, T) -> (B, T, d_input) 
 
+        return mu, logvar, tok
+
+    def forward(self, idx:torch.Tensor, target_props:torch.Tensor=None):
+        
+        # embed indices | used as input to both encoder and decoder
+        B, T = idx.shape
+        # tok = F.one_hot(idx, self.alphabet_size).float() # (B, T) -> (B, T, d_input)
+
+        # ########
+        # # encode
+        # ########
+        # tok = tok.permute(0,2,1)        # (B, T, d_input) -> (B, d_input, T) | necessary for convolutions
+        # mu_logvar = self.encoder(tok)   # (B, d_input, T) -> (B, d_hidden)
+        # mu, logvar = mu_logvar[:,:self.d_latent], mu_logvar[:,self.d_latent:] # (B, d_hidden) -> (B, d_latent), (B, d_latent)
+        # tok = tok.permute(0,2,1)        # (B, d_input, T) -> (B, T, d_input) 
+        mu, logvar, tok = self.encode(idx)
+        
         ########
         # VAE reparameterization trick
         ########
@@ -204,31 +234,43 @@ class GomezBombarelli(nn.Module):
         # decode
         ########
         # note the slice for T-1, since we want to predict the next token
-        logits = self.decoder(tok[:,:-1,:], z) # (B, T-1, d_input) -> (B, T-1, d_output)
+        if self.masking_probability>0.0:
+            mask_ = torch.randint(
+                0, 2, (B, T), 
+                generator=self.generator
+            ).unsqueeze(2).repeat(1,1,self.d_input) # (B, T-1)
+            mask_ = mask_.to(tok.device)
+            masked_tok = tok.masked_fill(mask_==1, 0.0) # (B, T, d_input) -> (B, T, d_input)
+            masked_tok = masked_tok[:,:-1,:] # (B, T, d_input) -> (B, T-1, d_input)
+        
+            logits = self.decoder(masked_tok, z) # (B, T-1, d_input) -> (B, T-1, d_output)
+        else:
+            logits = self.decoder(tok[:,:-1,:], z) # (B, T-1, d_input) -> (B, T-1, d_output)
 
         ########
         # property prediction and loss function
+        # compute reconstruction loss, KL divergence, and mean-squared error
         ########
         props = None
         if self.use_pp:
             props = self.property_predictor(mu) # (B, d_latent) -> (B, d_pp_output)
 
-        # reconstruction loss, KL divergence, and mean-squared error
-        BCE, KL, MSE = None, None, None
-        # if self.training in [True, False]:
-        BCE = F.cross_entropy(
-            logits.view(-1, self.alphabet_size), # (B * (T-1), d_input)
-            idx[:,1:].reshape(-1),                    # (B * (T-1))
-            reduction="mean",
-            ignore_index=self.padding_idx
-        )
-        KL  = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-        if self.use_pp:
-            MSE = F.mse_loss(
-                props[       ~target_props.isnan()], 
-                target_props[~target_props.isnan()], 
-                reduction="mean"
+            BCE, KL, MSE = self.loss_fn(
+                logits.view(-1, self.alphabet_size), # (B * (T-1), d_input)
+                idx[:,1:].reshape(-1),               # (B * (T-1))
+                mu,
+                logvar,
+                props[       ~target_props.isnan()],
+                target_props[~target_props.isnan()]
             )
+        else:
+            BCE, KL, MSE = self.loss_fn(
+                logits.view(-1, self.alphabet_size), # (B * (T-1), d_input)
+                idx[:,1:].reshape(-1),               # (B * (T-1))
+                mu,
+                logvar,
+            )
+        # KL  = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
         
         return logits, mu, logvar, props, BCE, KL, MSE
     
