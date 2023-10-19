@@ -134,7 +134,9 @@ if __name__=="__main__":
     for key_, value_ in args_dict.items():
         if value_ is not None:
             #continue # FLAG! don't want to use below atm
-            if key_.split("_")[0] in ["d","num"]:
+            key_prefix = key_.split("_")[0]
+            key_suffix = key_.split("_")[1:]
+            if key_prefix in ["d","num"]:
                 print(f"overwriting {key_=}'s value {config[key_]} with {value_}")
                 config[key_] = int(value_)
             elif key_ in ["lr", "dropout"]:
@@ -149,6 +151,9 @@ if __name__=="__main__":
                     config[key_] = False
                 else:
                     raise ValueError(f"invalid value for {key_}: {value_}")
+            elif key_ in ["save_dir"]:
+                print(f"overwriting {key_=}'s value {config[key_]} with {value_}")
+                config[key_] = value_
 
     config["run_day_time"] = str(datetime.now())
 
