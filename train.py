@@ -157,7 +157,7 @@ if __name__=="__main__":
 
     config["run_day_time"] = str(datetime.now())
 
-    LOGGING_LEVEL = args.logging
+    LOGGING_LEVEL = config["logging_level"]
     if LOGGING_LEVEL == "DEBUG":
         logging.basicConfig(level=logging.DEBUG)
     elif LOGGING_LEVEL == "INFO":
