@@ -1,0 +1,45 @@
+########################
+# model saving
+########################
+chkpt_freq: 10 # how often to save model checkpoints. if -1, then epoch 0 and last epoch
+save_dir: "./runs/" # directory to save models
+save_suffix: "_OracleLessMasking0p45" # suffix to add to the model name when saving
+
+logging_level: "WARNING" # options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+random_seed: 42 # random seed
+########################
+# model settings
+########################
+model_name: "cnn-vae" # options: rnn-vae, cnn-vae (gomez-bombarelli style)
+
+# generative model parameters
+d_input: 8 # number of input features
+d_embd: 16 # number of features in the embedding layer. FLAG: not used
+d_model: 32 # aka d_hidden, num features in the encoder/decoder hidden layers
+d_latent: 32 # num latent space features/dimensions
+
+d_rnn_hidden: 244 # num features in the rnn hidden layers
+num_gru_layers: 3 # number of gru layers
+d_output: 8 # number of output features
+
+
+
+max_length: 150 # max length of the input sequence
+padding_idx: 0 # padding index for the input sequence
+
+# probability of masking an input sequence element before feeding to the decoder. sort of interpolating between teacher forcing and free running
+masking_probability: 0.45 
+dropout: 0.0 # dropout rate
+
+# 'oracle'/property predictor parameters
+use_pp: False   # use property predictor true/false
+d_pp_hidden: 64 # number of hidden features in the property predictor layers
+d_pp_output: 1 # The output of the property predictor is a single value
+
+########################
+# training loop settings
+########################
+batch_size: 256 # batch size
+lr: 0.00005 # learning rate
+num_epochs: 50 # number of epochs
