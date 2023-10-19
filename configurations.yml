@@ -3,7 +3,7 @@
 ########################
 chkpt_freq: 10 # how often to save model checkpoints. if -1, then epoch 0 and last epoch
 save_dir: "./runs/" # directory to save models
-save_suffix: "_OracleLessMasking0p45" # suffix to add to the model name when saving
+save_suffix: "" # suffix to add to the model name when saving
 
 logging_level: "WARNING" # options: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
@@ -23,7 +23,7 @@ d_rnn_hidden: 244 # num features in the rnn hidden layers
 num_gru_layers: 3 # number of gru layers
 d_output: 8 # number of output features
 
-
+drop_percent_of_labels: 0 # used for semi-supervised learning
 
 max_length: 150 # max length of the input sequence
 padding_idx: 0 # padding index for the input sequence
