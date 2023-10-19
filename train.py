@@ -189,7 +189,7 @@ if __name__=="__main__":
     PP_MODE   = "regression"
     USE_PP = True if config["use_pp"] in ["True",True] else False
 
-    if args.chkpt_freq > 0:
+    if config["chkpt_freq"] > 0:
         CHKPT_FREQ = args.chkpt_freq 
     else:
         CHKPT_FREQ = N_EPOCHS
