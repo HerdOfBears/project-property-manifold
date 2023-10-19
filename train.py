@@ -173,7 +173,8 @@ if __name__=="__main__":
     # HYPERPARAMETERS
     #######################
     DROP_PERCENT_OF_LABELS = args.drop_percent_of_labels # percentage of labels to NaN out for experiment
-    
+    DROP_PERCENT_OF_LABELS = int(DROP_PERCENT_OF_LABELS) if DROP_PERCENT_OF_LABELS is not None else 0
+
     N_EPOCHS   = config["num_epochs"] # n times through training loader
     BATCH_SIZE = config["batch_size"] 
     LR         = config["lr"] # learning rate
