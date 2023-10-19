@@ -71,8 +71,8 @@ class OracleVAELoss(nn.Module):
         if self.use_pp:
             if self.pp_mode == "regression":
                 loss_pp = F.mse_loss(
-                    yhat[ ~ytrue.isnan()], 
-                    ytrue[~ytrue.isnan()], 
+                    yhat, 
+                    ytrue, 
                     reduction=self.reduction)
             else: # classification loss
                 loss_pp = F.cross_entropy(yhat, ytrue, reduction=self.reduction)

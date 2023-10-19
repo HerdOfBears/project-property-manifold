@@ -210,7 +210,8 @@ if __name__=="__main__":
 
     print(f"max length in the dataset: {data.max_len}")
     print(f"alphabet size: {data.alphabet_size}")
-    
+    logging.warning("replacing d_input with data.alphabet size")
+    config["d_input"] = data.alphabet_size
     
     #######################
     # Set seed for replicability and construct initialization fn
