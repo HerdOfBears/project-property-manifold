@@ -191,7 +191,7 @@ if __name__=="__main__":
     USE_PP = True if config["use_pp"] in ["True",True] else False
 
     if config["chkpt_freq"] > 0:
-        CHKPT_FREQ = args.chkpt_freq 
+        CHKPT_FREQ = config["chkpt_freq"]
     else:
         CHKPT_FREQ = N_EPOCHS
 
