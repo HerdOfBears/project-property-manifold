@@ -123,6 +123,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     with open("./configurations.yml", "rb") as f:
         config = yaml.safe_load(f)
+        
     config_keys = list(config.keys())
     for k_ in config_keys:
         parser.add_argument(f"--{k_}")
@@ -144,7 +145,6 @@ if __name__=="__main__":
                 config[key_] = float(value_)
             elif key_ in ["use_pp"]:
                 print(f"overwriting {key_=}'s value {config[key_]} with {value_}")
-                # print(value_)
                 if value_=="True":
                     config[key_] = True
                 elif value_=="False":
@@ -302,8 +302,9 @@ if __name__=="__main__":
     model.apply(initialize_weights)
     print("weights initialized")
 
-    with open(MODEL_DIR + f"model_{model.name}_args{SAVE_SUFFIX}.pkl","wb") as f:
-        pkl.dump(vars(args), f)
+    with open(MODEL_DIR + f"model_{model.name}{SAVE_SUFFIX}_args.pkl","wb") as f:
+        # pkl.dump(vars(args), f)
+        pkl.dump(config, f)
 
     #######################
     # train
