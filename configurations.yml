@@ -19,7 +19,7 @@ d_embd: 16 # number of features in the embedding layer. FLAG: not used
 d_model: 32 # aka d_hidden, num features in the encoder/decoder hidden layers
 d_latent: 32 # num latent space features/dimensions
 
-d_rnn_hidden: 244 # num features in the rnn hidden layers
+d_rnn_hidden: 64 # num features in the rnn hidden layers
 num_gru_layers: 3 # number of gru layers
 d_output: 8 # number of output features
 
@@ -29,7 +29,7 @@ max_length: 150 # max length of the input sequence
 padding_idx: 0 # padding index for the input sequence
 
 # probability of masking an input sequence element before feeding to the decoder. sort of interpolating between teacher forcing and free running
-masking_probability: 0.45 
+masking_probability: 0.0
 dropout: 0.0 # dropout rate
 
 # 'oracle'/property predictor parameters
@@ -42,5 +42,5 @@ d_pp_output: 3 # The output of the property predictor is a single value
 # training loop settings
 ########################
 batch_size: 256 # batch size
-lr: 0.00005 # learning rate
+lr: 0.0005 # learning rate
 num_epochs: 50 # number of epochs
