@@ -34,8 +34,9 @@ dropout: 0.0 # dropout rate
 
 # 'oracle'/property predictor parameters
 use_pp: False   # use property predictor true/false
+property_names: ["logP","qed","SAS"]
 d_pp_hidden: 64 # number of hidden features in the property predictor layers
-d_pp_output: 1 # The output of the property predictor is a single value
+d_pp_output: 3 # The output of the property predictor is a single value
 
 ########################
 # training loop settings
