@@ -43,12 +43,14 @@ class Zinc250k():
                  data_dir, 
                  data_file, 
                  save_dir, 
-                 save_file):
+                 save_file,
+                 property_names="logP"):
         # set parameters
         self.data_dir  = data_dir
         self.data_file = data_file
         self.save_dir  = save_dir
         self.save_file = save_file
+        self.property_names = property_names
 
         # load data, and make dictionary converting smiles to indices
         self.data = pd.read_csv(
@@ -155,6 +157,7 @@ class Zinc250k():
         # create torch dataset objects
         logging.warning(f"using logP as a hard-coded property. This should be changed to an argumnet. ")
         property_name = "logP"
+        property_name = self.property_names
         return (self.encoded_smiles[train_idxs], 
                 self.encoded_smiles[valid_idxs],
                 self.encoded_smiles[ test_idxs],
@@ -171,7 +174,8 @@ if __name__ == "__main__":
     dataset = Zinc250k("./data", 
                        "250k_rndm_zinc_drugs_clean_3.csv",
                        "./data",
-                       ""
+                       "",
+                       property_names=["logP","qed","SAS"]
     )
 
     logging.info(dataset.data.head())
@@ -180,7 +184,7 @@ if __name__ == "__main__":
     # train_dataloader, valid_dataloader, test_dataloader = dataset.create_data_splits()
 
     print(f"length of train_data: {len(train_data)}")
-    print(F"length of train_targets: {len(train_targets)}")
+    print(f"length of train_targets: {len(train_targets)}")
 
     train_data = Zinc250kDataset(train_data, train_targets)
     valid_data = Zinc250kDataset(valid_data, valid_targets) 
@@ -208,6 +212,7 @@ if __name__ == "__main__":
 
     bch_x, bch_seq_lens, bch_y = next(iter(train_loader))
     print(f"{bch_x.shape=}")
+    print(f"{bch_y.shape=}")
     print((bch_x[30]!=0).sum())
     print(bch_seq_lens[30])
     # print(f"length of train_data: {len(train_dataloader)}")

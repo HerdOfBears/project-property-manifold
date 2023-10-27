@@ -178,6 +178,11 @@ if __name__=="__main__":
     N_EPOCHS   = config["num_epochs"] # n times through training loader
     BATCH_SIZE = config["batch_size"] 
     LR         = config["lr"] # learning rate
+    PROPERTY_NAMES = config["property_names"]
+    if len(PROPERTY_NAMES) != config["d_pp_output"]:
+        raise ValueError(
+            f"n property names ({len(PROPERTY_NAMES)}) does not match oracle output dimensions ({config['d_pp_output']})"
+        )
     
     SAVE_DIR    = config["save_dir"]
     SAVE_SUFFIX = config["save_suffix"]
@@ -205,7 +210,8 @@ if __name__=="__main__":
     data = Zinc250k("./data", 
                        "250k_rndm_zinc_drugs_clean_3.csv",
                        "./data",
-                       ""
+                       "",
+                       property_names=PROPERTY_NAMES
     )
 
     print(f"max length in the dataset: {data.max_len}")
